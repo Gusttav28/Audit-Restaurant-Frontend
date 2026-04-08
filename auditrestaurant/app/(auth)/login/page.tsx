@@ -1,0 +1,193 @@
+"use client"
+
+import React from "react"
+
+import { useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { ClipboardCheck, Eye, EyeOff, Loader2 } from "lucide-react"
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [formData, setFormData] = useState({
+    email: "",
+    password: ""
+  })
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    setError("")
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+
+    // Simulate authentication
+    await new Promise(resolve => setTimeout(resolve, 1500))
+
+    // Demo: accept any email/password for now
+    if (formData.email && formData.password) {
+      // Store auth state
+      localStorage.setItem("auditflow_user", JSON.stringify({
+        email: formData.email,
+        name: formData.email.split("@")[0],
+        subscription: null
+      }))
+      router.push("/subscription")
+    } else {
+      setError("Please enter your email and password")
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Left Side - Form */}
+      <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-20 xl:px-24">
+        <div className="w-full max-w-sm mx-auto">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 mb-12">
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <ClipboardCheck size={22} className="text-primary-foreground" />
+            </div>
+            <span className="text-xl font-semibold text-foreground">AuditFlow</span>
+          </Link>
+
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Welcome back</h1>
+            <p className="text-muted-foreground">
+              Enter your credentials to access your account
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                placeholder="you@company.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 pr-12 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-border bg-card text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-muted-foreground">Remember me</span>
+              </label>
+              <a href="#" className="text-sm text-primary hover:underline">
+                Forgot password?
+              </a>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-foreground text-background hover:bg-foreground/90 h-12 text-base"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign in"
+              )}
+            </Button>
+          </form>
+
+          {/* Signup Link */}
+          <p className="mt-8 text-center text-muted-foreground">
+            {"Don't have an account? "}
+            <Link href="/signup" className="text-primary hover:underline font-medium">
+              Create one
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Right Side - Decorative */}
+      <div className="hidden lg:flex flex-1 bg-card border-l border-border items-center justify-center p-12">
+        <div className="max-w-md">
+          <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-8">
+            <ClipboardCheck size={40} className="text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground mb-4">
+            Precision inventory control at your fingertips
+          </h2>
+          <p className="text-muted-foreground leading-relaxed">
+            Track stock levels, perform audits, and maintain complete visibility 
+            across all your inventories. Make data-driven decisions with real-time 
+            discrepancy detection.
+          </p>
+          <div className="mt-8 flex items-center gap-4">
+            <div className="flex -space-x-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center text-xs font-medium text-primary"
+                >
+                  {String.fromCharCode(64 + i)}
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Join 2,500+ teams already using AuditFlow
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
