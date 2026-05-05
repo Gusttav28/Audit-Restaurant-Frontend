@@ -1,228 +1,325 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { Package, Plus, Settings, Store, TriangleAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Sidebar from "@/components/layout/sidebar"
 import Header from "@/components/layout/header"
-import InventoryTable from "@/components/inventory/inventory-table"
-import InventoryFilters from "@/components/inventory/inventory-filters"
+import Sidebar from "@/components/layout/sidebar"
 import AddItemModal from "@/components/inventory/add-item-modal"
 import EditItemModal from "@/components/inventory/edit-item-modal"
+import InventoryFilters from "@/components/inventory/inventory-filters"
+import InventoryTable from "@/components/inventory/inventory-table"
 import ManageTypesModal from "@/components/inventory/manage-types-modal"
-import { Plus, Settings } from "lucide-react"
-
-interface CustomUnit {
-  id: number
-  name: string
-  abbreviation: string
-  baseUnit: string
-  conversionFactor: number
-  category: "weight" | "volume" | "quantity" | "custom"
-}
+import { useAppContext } from "@/components/app-context"
+import { type InventoryItem } from "@/components/inventory/multi-restaurant-data"
 
 export default function InventoryPage() {
+  const {
+    selectedRestaurant,
+    addInventoryItem,
+    updateInventoryItem,
+    deleteInventoryItem,
+    addInventoryType,
+    updateInventoryType,
+    deleteInventoryType,
+    addCustomUnit,
+    deleteCustomUnit,
+    formatCurrency,
+    t,
+  } = useAppContext()
+  const [selectedTypeId, setSelectedTypeId] = useState(selectedRestaurant.inventoryTypes[0]?.id ?? 0)
+  const [focusedView, setFocusedView] = useState<"inventory" | "all" | "low" | "expiring">("inventory")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
-  const [selectedType, setSelectedType] = useState("all")
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isTypesModalOpen, setIsTypesModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<typeof initialInventoryItems[0] | null>(null)
-  const [items, setItems] = useState(initialInventoryItems)
-  const [testDBItems, settestDBItems] = useState()
-  const [inventoryTypes, setInventoryTypes] = useState([
-    { id: 1, name: "Kitchen", color: "#3b82f6", active: true },
-    { id: 2, name: "Bar", color: "#8b5cf6", active: true },
-  ])
-  const [customUnits, setCustomUnits] = useState<CustomUnit[]>([
-    { id: 1, name: "Case", abbreviation: "cs", baseUnit: "pieces", conversionFactor: 24, category: "quantity" },
-    { id: 2, name: "Carton", abbreviation: "ctn", baseUnit: "kg", conversionFactor: 10, category: "weight" },
-  ])
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
+  const [registeredSuppliersByRestaurant, setRegisteredSuppliersByRestaurant] = useState<Record<number, string[]>>({})
+
+  const activeTypes = selectedRestaurant?.inventoryTypes.filter((type) => type.active) ?? []
+  const selectedType = activeTypes.find((type) => type.id === selectedTypeId) ?? activeTypes[0]
+  const allRestaurantItems = activeTypes.flatMap((type) => type.items)
+  const registeredSuppliers = useMemo(() => {
+    const fromItems = allRestaurantItems.map((item) => item.supplier).filter(Boolean)
+    const fromRegistry = registeredSuppliersByRestaurant[selectedRestaurant.id] ?? []
+    return Array.from(new Set([...fromItems, ...fromRegistry])).sort((a, b) => a.localeCompare(b))
+  }, [allRestaurantItems, registeredSuppliersByRestaurant, selectedRestaurant.id])
+
+  useEffect(() => {
+    const view = new URLSearchParams(window.location.search).get("view")
+    if (view === "low" || view === "expiring") {
+      setFocusedView(view)
+    }
+  }, [])
+
+  useEffect(() => {
+    setSelectedTypeId(activeTypes[0]?.id ?? 0)
+    setSearchTerm("")
+    setSelectedCategory("all")
+    setSelectedStatus("all")
+  }, [selectedRestaurant.id])
+
+  useEffect(() => {
+    if (selectedType || activeTypes.length === 0) return
+    setSelectedTypeId(activeTypes[0].id)
+  }, [activeTypes, selectedType])
 
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+    const sourceItems = focusedView === "inventory" ? selectedType?.items ?? [] : allRestaurantItems
+
+    return sourceItems.filter((item) => {
       const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = selectedCategory === "all" || item.category === selectedCategory
       const matchesStatus = selectedStatus === "all" || item.status === selectedStatus
-      const matchesType = selectedType === "all" || item.type === selectedType
-      return matchesSearch && matchesCategory && matchesStatus && matchesType
+      const matchesFocus =
+        focusedView === "low"
+          ? item.status === "low" || item.status === "critical"
+          : focusedView === "expiring"
+            ? Boolean(item.daysUntilExpiry && item.daysUntilExpiry <= 7)
+            : true
+      return matchesSearch && matchesCategory && matchesStatus && matchesFocus
     })
-  }, [searchTerm, selectedCategory, selectedStatus, selectedType, items])
+  }, [searchTerm, selectedCategory, selectedStatus, selectedType, focusedView, allRestaurantItems])
 
-  const handleAddItem = (newItem: any) => {
-    setItems([...items, { ...newItem, id: items.length + 1 }])
-    setIsModalOpen(false)
+  const typeStats = activeTypes.map((type) => ({
+    ...type,
+    totalItems: type.items.length,
+    lowStock: type.items.filter((item) => item.status === "low" || item.status === "critical").length,
+    value: type.items.reduce((sum, item) => sum + item.quantity * item.price, 0),
+  }))
+
+  const handleAddItem = (newItem: Omit<InventoryItem, "id" | "restaurantId" | "typeId">) => {
+    const targetType = activeTypes.find((type) => type.name === newItem.type) ?? selectedType
+    if (!targetType) return
+    addInventoryItem(targetType.id, newItem)
+    setSelectedTypeId(targetType.id)
+    setIsAddModalOpen(false)
   }
 
-  const handleUpdateItem = (id: number, updatedData: any) => {
-    setItems(items.map((item) => (item.id === id ? { ...item, ...updatedData } : item)))
-  }
-
-  const handleEditItem = (item: typeof initialInventoryItems[0]) => {
-    setEditingItem(item)
-    setIsEditModalOpen(true)
-  }
-
-  const handleSaveEdit = (id: number, data: Partial<typeof initialInventoryItems[0]>) => {
-    handleUpdateItem(id, data)
+  const handleSaveEdit = (id: number, data: Partial<InventoryItem>) => {
+    updateInventoryItem(id, data)
     setIsEditModalOpen(false)
     setEditingItem(null)
   }
 
   const handleDeleteItem = (id: number) => {
-    setItems(items.filter((item) => item.id !== id))
-  }
-
-  const handleAddType = (newType: { name: string; color: string }) => {
-    setInventoryTypes([...inventoryTypes, { ...newType, id: inventoryTypes.length + 1, active: true }])
-  }
-
-  const handleUpdateType = (id: number, updatedData: any) => {
-    setInventoryTypes(inventoryTypes.map((type) => (type.id === id ? { ...type, ...updatedData } : type)))
+    deleteInventoryItem(id)
   }
 
   const handleDeleteType = (id: number) => {
-    setInventoryTypes(inventoryTypes.filter((type) => type.id !== id))
-    setItems(items.filter((item) => item.type !== inventoryTypes.find((t) => t.id === id)?.name))
+    const remainingTypes = activeTypes.filter((type) => type.id !== id)
+    setSelectedTypeId(remainingTypes[0]?.id ?? 0)
+    deleteInventoryType(id)
   }
 
-  const handleAddUnit = (newUnit: Omit<CustomUnit, "id">) => {
-    setCustomUnits([...customUnits, { ...newUnit, id: customUnits.length + 1 }])
+  const handleRegisterSupplier = (supplier: string) => {
+    const trimmedSupplier = supplier.trim()
+    if (!trimmedSupplier) return
+    setRegisteredSuppliersByRestaurant((current) => ({
+      ...current,
+      [selectedRestaurant.id]: Array.from(new Set([...(current[selectedRestaurant.id] ?? []), trimmedSupplier])),
+    }))
   }
-
-  const handleDeleteUnit = (id: number) => {
-    setCustomUnits(customUnits.filter((unit) => unit.id !== id))
-  }
-
-  const activeTypes = inventoryTypes.filter((t) => t.active)
-  const typeStats = activeTypes.map((type) => ({
-    name: type.name,
-    color: type.color,
-    count: items.filter((i) => i.type === type.name).length,
-    lowStock: items.filter((i) => i.type === type.name && i.status === "low").length,
-  }))
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <Header />
-        <main className="p-6 space-y-6">
-          {/* Page Header */}
-          <div className="flex justify-between items-start">
+        <main className="p-4 space-y-6 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Inventory Management</h1>
-              <p className="text-muted-foreground mt-1">Track and manage all restaurant inventory items</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Store size={16} className="text-primary" />
+                <span>{selectedRestaurant?.location}</span>
+              </div>
+              <h1 className="mt-1 text-3xl font-bold text-foreground">{t("inventoryManagement")}</h1>
+              <p className="text-muted-foreground mt-1">
+                {t("manageInventoryFor")} {selectedRestaurant?.name}
+              </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button onClick={() => setIsTypesModalOpen(true)} variant="outline" className="gap-2">
                 <Settings size={20} />
-                Manage Types
+                {t("manageTypes")}
               </Button>
               <Button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => setIsAddModalOpen(true)}
+                disabled={!selectedType}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
               >
                 <Plus size={20} />
-                Add Item
+                {t("addItem")}
               </Button>
             </div>
           </div>
 
-          {/* Inventory Type Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {typeStats.map((stat) => (
-              <Card key={stat.name} className="bg-card border-border">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stat.color }} />
-                    <CardTitle className="text-sm text-muted-foreground">{stat.name}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold text-foreground">{stat.count}</p>
-                  <p className="text-xs text-destructive mt-1">{stat.lowStock} low stock</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-card border-border">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+            <Card
+              className={`bg-card border-border cursor-pointer transition-colors hover:border-accent/50 ${focusedView === "all" ? "border-accent/60" : ""}`}
+              onClick={() => {
+                setFocusedView("all")
+                setSelectedStatus("all")
+                setSelectedCategory("all")
+                setSearchTerm("")
+              }}
+            >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Total Items</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t("restaurantItems")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-foreground">{items.length}</p>
-                <p className="text-xs text-accent mt-1">+2 this week</p>
+                <p className="text-2xl font-bold text-foreground">{allRestaurantItems.length}</p>
+                <p className="text-xs text-accent mt-1">{activeTypes.length} inventory types</p>
               </CardContent>
             </Card>
-            <Card className="bg-card border-border">
+            <Card
+              className={`bg-card border-border cursor-pointer transition-colors hover:border-destructive/50 ${focusedView === "low" ? "border-destructive/60" : ""}`}
+              onClick={() => setFocusedView(focusedView === "low" ? "all" : "low")}
+            >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Low Stock</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t("lowStock")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-destructive">{items.filter((i) => i.status === "low").length}</p>
-                <p className="text-xs text-accent mt-1">Need restocking</p>
+                <p className="text-2xl font-bold text-destructive">
+                  {allRestaurantItems.filter((item) => item.status === "low" || item.status === "critical").length}
+                </p>
+                <p className="text-xs text-accent mt-1">{t("needsAttention")}</p>
               </CardContent>
             </Card>
-            <Card className="bg-card border-border">
+            <Card
+              className={`bg-card border-border cursor-pointer transition-colors hover:border-primary/50 ${focusedView === "expiring" ? "border-primary/60" : ""}`}
+              onClick={() => setFocusedView(focusedView === "expiring" ? "all" : "expiring")}
+            >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Categories</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-foreground">8</p>
-                <p className="text-xs text-accent mt-1">Item types</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Expiring Soon</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t("expiringSoon")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-primary">
-                  {items.filter((i) => i.daysUntilExpiry && i.daysUntilExpiry <= 7).length}
+                  {allRestaurantItems.filter((item) => item.daysUntilExpiry && item.daysUntilExpiry <= 7).length}
                 </p>
-                <p className="text-xs text-accent mt-1">Within 7 days</p>
+                <p className="text-xs text-accent mt-1">{t("within7Days")}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">{t("inventoryValue")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="min-w-0 break-words text-xl font-bold leading-tight text-foreground sm:text-2xl">
+                  {formatCurrency(allRestaurantItems.reduce((sum, item) => sum + item.quantity * item.price, 0))}
+                </p>
+                <p className="text-xs text-accent mt-1">{t("currentStockValue")}</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Filters and Table */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+            {typeStats.map((type) => (
+              <button
+                key={type.id}
+                onClick={() => {
+                  setSelectedTypeId(type.id)
+                  setFocusedView("inventory")
+                }}
+                className={`rounded-lg border p-4 text-left transition-colors ${
+                  selectedType?.id === type.id
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:bg-secondary/30"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: type.color }} />
+                    <span className="truncate font-semibold text-foreground">{type.name}</span>
+                  </div>
+                  <Package size={18} className="text-muted-foreground" />
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                  <span>
+                    <strong className="block text-lg text-foreground">{type.totalItems}</strong>
+                    {t("items")}
+                  </span>
+                  <span>
+                    <strong className="block text-lg text-destructive">{type.lowStock}</strong>
+                    {t("alerts")}
+                  </span>
+                  <span>
+                    <strong className="block break-words text-base leading-tight text-foreground sm:text-lg">{formatCurrency(type.value)}</strong>
+                    {t("value")}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+
           <Card className="bg-card border-border">
             <CardHeader>
-              <div className="flex justify-between items-start">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <CardTitle>Inventory List</CardTitle>
-                  <CardDescription>Manage your restaurant inventory</CardDescription>
+                  <CardTitle className="flex items-center gap-2">
+                    {selectedType ? (
+                      <>
+                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: selectedType.color }} />
+                        {focusedView === "low" ? t("lowStock") : focusedView === "expiring" ? t("expiringSoon") : focusedView === "all" ? t("restaurantItems") : `${selectedType.name} Inventory`}
+                      </>
+                    ) : (
+                      "Inventory"
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    {selectedType
+                      ? focusedView === "inventory" ? `Items assigned to ${selectedType.name} at ${selectedRestaurant?.name}` : `Items across all inventories at ${selectedRestaurant?.name}`
+                      : "Create an inventory type to start adding items"}
+                  </CardDescription>
                 </div>
-                <span className="text-xs font-medium text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full">
+                <span className="w-fit rounded-full bg-secondary/50 px-3 py-1 text-xs font-medium text-muted-foreground">
                   {filteredItems.length} items
                 </span>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <InventoryFilters
-                searchTerm={searchTerm}
-                selectedCategory={selectedCategory}
-                selectedStatus={selectedStatus}
-                selectedType={selectedType}
-                inventoryTypes={activeTypes}
-                onSearchChange={setSearchTerm}
-                onCategoryChange={setSelectedCategory}
-                onStatusChange={setSelectedStatus}
-                onTypeChange={setSelectedType}
-              />
-              <InventoryTable items={filteredItems} onUpdateItem={handleUpdateItem} onDeleteItem={handleDeleteItem} onEditItem={handleEditItem} />
+              {selectedType ? (
+                <>
+                  <InventoryFilters
+                    searchTerm={searchTerm}
+                    selectedCategory={selectedCategory}
+                    selectedStatus={selectedStatus}
+                    selectedType={selectedType.name}
+                    inventoryTypes={activeTypes}
+                    onSearchChange={setSearchTerm}
+                    onCategoryChange={setSelectedCategory}
+                    onStatusChange={setSelectedStatus}
+                    onTypeChange={() => undefined}
+                    showTypeFilter={false}
+                  />
+                  <InventoryTable
+                    items={filteredItems}
+                    onUpdateItem={() => undefined}
+                    onDeleteItem={handleDeleteItem}
+                    onEditItem={(item) => {
+                      setEditingItem(item as InventoryItem)
+                      setIsEditModalOpen(true)
+                    }}
+                  />
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border py-12 text-center">
+                  <TriangleAlert size={28} className="text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No inventory types exist for this restaurant yet.</p>
+                  <Button onClick={() => setIsTypesModalOpen(true)} variant="outline" className="gap-2">
+                    <Plus size={18} />
+                    Add Inventory Type
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </main>
       </div>
 
-      {/* Edit Item Modal */}
       <EditItemModal
         isOpen={isEditModalOpen}
         item={editingItem}
@@ -234,172 +331,27 @@ export default function InventoryPage() {
         inventoryTypes={activeTypes}
       />
 
-      {/* Add Item Modal */}
       <AddItemModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
         onAdd={handleAddItem}
         inventoryTypes={activeTypes}
-        customUnits={customUnits}
-        onAddUnit={handleAddUnit}
-        onDeleteUnit={handleDeleteUnit}
+        customUnits={selectedRestaurant?.customUnits ?? []}
+        onAddUnit={addCustomUnit}
+        onDeleteUnit={deleteCustomUnit}
+        selectedTypeName={selectedType?.name}
+        suppliers={registeredSuppliers}
+        onRegisterSupplier={handleRegisterSupplier}
       />
 
-      {/* Manage Inventory Types Modal */}
       <ManageTypesModal
         isOpen={isTypesModalOpen}
         onClose={() => setIsTypesModalOpen(false)}
-        inventoryTypes={inventoryTypes}
-        onAddType={handleAddType}
-        onUpdateType={handleUpdateType}
+        inventoryTypes={activeTypes}
+        onAddType={addInventoryType}
+        onUpdateType={updateInventoryType}
         onDeleteType={handleDeleteType}
       />
     </div>
   )
 }
-
-const initialInventoryItems = 
-[
-  {
-    id: 1,
-    name: "Olive Oil",
-    type: "Kitchen",
-    category: "Oils & Vinegars",
-    quantity: 8,
-    unit: "L",
-    minStock: 5,
-    status: "good",
-    price: 28.5,
-    lastUpdated: "2024-01-15",
-    supplier: "Fresh Imports",
-    daysUntilExpiry: 120,
-  },
-  {
-    id: 2,
-    name: "Fresh Basil",
-    type: "Kitchen",
-    category: "Herbs & Spices",
-    quantity: 2,
-    unit: "bundles",
-    minStock: 4,
-    status: "low",
-    price: 3.5,
-    lastUpdated: "2024-01-14",
-    supplier: "Local Farm",
-    daysUntilExpiry: 3,
-  },
-  {
-    id: 3,
-    name: "Pasta (Penne)",
-    type: "Kitchen",
-    category: "Grains & Pasta",
-    quantity: 15,
-    unit: "boxes",
-    minStock: 10,
-    status: "good",
-    price: 2.2,
-    lastUpdated: "2024-01-15",
-    supplier: "Italian Imports",
-    daysUntilExpiry: null,
-  },
-  {
-    id: 4,
-    name: "Cheddar Cheese",
-    type: "Kitchen",
-    category: "Dairy",
-    quantity: 3,
-    unit: "kg",
-    minStock: 5,
-    status: "low",
-    price: 12.0,
-    lastUpdated: "2024-01-13",
-    supplier: "Dairy Plus",
-    daysUntilExpiry: 15,
-  },
-  {
-    id: 5,
-    name: "Tomatoes",
-    type: "Kitchen",
-    category: "Produce",
-    quantity: 12,
-    unit: "kg",
-    minStock: 8,
-    status: "good",
-    price: 4.5,
-    lastUpdated: "2024-01-15",
-    supplier: "Fresh Market",
-    daysUntilExpiry: 4,
-  },
-  {
-    id: 6,
-    name: "Vodka",
-    type: "Bar",
-    category: "Spirits",
-    quantity: 12,
-    unit: "bottles",
-    minStock: 8,
-    status: "good",
-    price: 28.0,
-    lastUpdated: "2024-01-15",
-    supplier: "Liquor Wholesale",
-    daysUntilExpiry: null,
-  },
-  {
-    id: 7,
-    name: "Tonic Water",
-    type: "Bar",
-    category: "Mixers",
-    quantity: 5,
-    unit: "L",
-    minStock: 10,
-    status: "low",
-    price: 4.5,
-    lastUpdated: "2024-01-14",
-    supplier: "Beverage Co",
-    daysUntilExpiry: 90,
-  },
-  {
-    id: 8,
-    name: "Fresh Mint",
-    type: "Bar",
-    category: "Garnishes",
-    quantity: 3,
-    unit: "bundles",
-    minStock: 5,
-    status: "low",
-    price: 2.5,
-    lastUpdated: "2024-01-15",
-    supplier: "Local Farm",
-    daysUntilExpiry: 5,
-  },
-  {
-    id: 9,
-    name: "Lemons",
-    type: "Bar",
-    category: "Garnishes",
-    quantity: 8,
-    unit: "kg",
-    minStock: 5,
-    status: "good",
-    price: 3.0,
-    lastUpdated: "2024-01-15",
-    supplier: "Fresh Market",
-    daysUntilExpiry: 7,
-  },
-  {
-    id: 10,
-    name: "Red Wine",
-    type: "Bar",
-    category: "Wine",
-    quantity: 15,
-    unit: "bottles",
-    minStock: 10,
-    status: "good",
-    price: 35.0,
-    lastUpdated: "2024-01-14",
-    supplier: "Wine Imports",
-    daysUntilExpiry: null,
-  },
-]
-
-

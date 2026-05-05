@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { X, Plus, ChevronDown, ChevronUp, Trash2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { X, Plus, ChevronDown, ChevronUp, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { InventoryItem } from "@/app/(dashboard)/audits/page"
+import { useAppContext } from "@/components/app-context"
 
 interface CustomUnit {
   id: number
@@ -23,6 +23,10 @@ interface AddItemModalProps {
   customUnits?: CustomUnit[]
   onAddUnit?: (unit: Omit<CustomUnit, "id">) => void
   onDeleteUnit?: (id: number) => void
+  selectedTypeName?: string
+  lockInventoryType?: boolean
+  suppliers?: string[]
+  onRegisterSupplier?: (supplier: string) => void
 }
 
 const defaultUnits = [
@@ -55,11 +59,16 @@ export default function AddItemModal({
   inventoryTypes,
   customUnits = [],
   onAddUnit,
-  onDeleteUnit
+  onDeleteUnit,
+  selectedTypeName,
+  lockInventoryType = false,
+  suppliers = [],
+  onRegisterSupplier,
 }: AddItemModalProps) {
+  const { selectedRestaurant, t } = useAppContext()
   const [formData, setFormData] = useState({
     name: "",
-    type: inventoryTypes[0]?.name || "Kitchen",
+    type: selectedTypeName || inventoryTypes[0]?.name || "Kitchen",
     category: "Herbs & Spices",
     quantity: "",
     unit: "boxes",
@@ -67,6 +76,19 @@ export default function AddItemModal({
     price: "",
     supplier: "",
   })
+  const [isSaving, setIsSaving] = useState(false)
+  const [showSupplierForm, setShowSupplierForm] = useState(false)
+  const [supplierToRegister, setSupplierToRegister] = useState("")
+  const [shouldSaveSupplier, setShouldSaveSupplier] = useState(true)
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    setFormData((prev) => ({
+      ...prev,
+      type: selectedTypeName || inventoryTypes[0]?.name || "Kitchen",
+    }))
+  }, [isOpen, inventoryTypes, selectedTypeName])
 
 
   const [showCustomUnitForm, setShowCustomUnitForm] = useState(false)
@@ -96,8 +118,6 @@ export default function AddItemModal({
     ...defaultUnits,
     ...customUnits.map(u => ({ name: u.name, value: u.abbreviation, category: u.category }))
   ]
-
-  const units = allUnits.map(unit => unit.value);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -131,75 +151,50 @@ export default function AddItemModal({
       setShowCustomUnitForm(false)
     }
   }
-  interface InventoryItem {
-  id: number;
-  item_name: string;
-  item_category: string;
-  item_quantity: number;
-  item_unit: string;
-}
 
-  const [listt, setlistt] = useState([])
+  const handleRegisterSupplier = () => {
+    const supplier = supplierToRegister.trim()
+    if (!supplier) return
+    setFormData((prev) => ({ ...prev, supplier }))
+    if (shouldSaveSupplier && onRegisterSupplier) {
+      onRegisterSupplier(supplier)
+    }
+    setSupplierToRegister("")
+    setShouldSaveSupplier(true)
+    setShowSupplierForm(false)
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (formData.name && formData.quantity && formData.minStock && formData.price) {
       const selectedCustomUnit = customUnits.find(u => u.abbreviation === formData.unit)
-      onAdd({
-        ...formData,
-        quantity: Number.parseFloat(formData.quantity),
-        minStock: Number.parseFloat(formData.minStock),
-        price: Number.parseFloat(formData.price),
-        status: "good",
-        lastUpdated: new Date().toISOString().split("T")[0],
-        daysUntilExpiry: null,
-        unitDetails: selectedCustomUnit || null,
-      })
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}barinventory/`, {
-          method:'POST',
-          headers: {
-            'Content-type':'application/json'
-          },
-          body: JSON.stringify({
-            item_name:formData.name,
-            item_category: formData.category,
-            item_quantity:formData.quantity,
-            item_unit:formData.unit,
-            item_min_stock:formData.minStock,
-            item_price:formData.price,
-            item_supplier:formData.supplier
-          }),
-        });
-        if (!response.ok) { 
-          throw new Error("Something went wrong, please try again.");
-          
-        }
-        window.alert("You item have been added")
-        const result = await response.json();
-        console.log(result)
-      } catch (error) {
-        console.log("There's an error: ", error)
-      }
-      setFormData({
-        name: "",
-        type: inventoryTypes[0]?.name || "Kitchen",
-        category: "Herbs & Spices",
-        quantity: "",
-        unit: "boxes",
-        minStock: "",
-        price: "",
-        supplier: "",
-      })
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}barinventory/`)
-        // const task = await response.json()
-        const task: InventoryItem[] = await response.json()
-        console.log(task.map(itemss => itemss))
-        return task
-      } catch (error) {
-        console.log(error)
-      }
+      setIsSaving(true)
+      window.setTimeout(() => {
+        onAdd({
+          ...formData,
+          quantity: Number.parseFloat(formData.quantity),
+          minStock: Number.parseFloat(formData.minStock),
+          price: Number.parseFloat(formData.price),
+          status: "good",
+          lastUpdated: new Date().toISOString().split("T")[0],
+          daysUntilExpiry: null,
+          unitDetails: selectedCustomUnit || null,
+        })
+        setFormData({
+          name: "",
+          type: selectedTypeName || inventoryTypes[0]?.name || "Kitchen",
+          category: "Herbs & Spices",
+          quantity: "",
+          unit: "boxes",
+          minStock: "",
+          price: "",
+          supplier: "",
+        })
+        setShowSupplierForm(false)
+        setSupplierToRegister("")
+        setShouldSaveSupplier(true)
+        setIsSaving(false)
+      }, 250)
     }
   }
 
@@ -207,10 +202,13 @@ export default function AddItemModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-lg w-full max-w-md">
+      <div className="bg-card border border-border rounded-lg w-full max-w-3xl max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-border">
-          <h2 className="text-lg font-bold text-foreground">Add Inventory Item</h2>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">{t("addNewItem")}</h2>
+            <p className="text-xs text-muted-foreground">{t("currentRestaurant")}: {selectedRestaurant.name}</p>
+          </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X size={24} />
           </button>
@@ -219,11 +217,12 @@ export default function AddItemModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Inventory Type *</label>
+            <label className="block text-sm font-medium text-foreground mb-1">{t("selectInventory")} *</label>
             <select
               name="type"
               value={formData.type}
               onChange={handleChange}
+              disabled={lockInventoryType}
               className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent cursor-pointer"
             >
               {inventoryTypes.map((type) => (
@@ -235,8 +234,9 @@ export default function AddItemModal({
           </div>
 
           {/* Item Name */}
+          <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Item Name *</label>
+            <label className="block text-sm font-medium text-foreground mb-1">{t("itemName")} *</label>
             <input
               type="text"
               name="name"
@@ -250,7 +250,7 @@ export default function AddItemModal({
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Category *</label>
+            <label className="block text-sm font-medium text-foreground mb-1">{t("category")} *</label>
             <select
               name="category"
               value={formData.category}
@@ -264,11 +264,12 @@ export default function AddItemModal({
               ))}
             </select>
           </div>
+          </div>
 
           {/* Quantity & Unit */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Quantity *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{t("quantity")} *</label>
               <input
                 type="number"
                 name="quantity"
@@ -282,13 +283,13 @@ export default function AddItemModal({
             </div>
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label className="block text-sm font-medium text-foreground">Unit *</label>
+                <label className="block text-sm font-medium text-foreground">{t("unit")} *</label>
                 <button
                   type="button"
                   onClick={() => setShowUnitManager(!showUnitManager)}
                   className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
                 >
-                  Manage Units
+                  {t("manageUnits")}
                   {showUnitManager ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                 </button>
               </div>
@@ -458,7 +459,7 @@ export default function AddItemModal({
           {/* Min Stock & Price */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Min Stock *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{t("minStock")} *</label>
               <input
                 type="number"
                 name="minStock"
@@ -471,7 +472,7 @@ export default function AddItemModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Price ($) *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">{t("price")} *</label>
               <input
                 type="number"
                 name="price"
@@ -487,24 +488,80 @@ export default function AddItemModal({
 
           {/* Supplier */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Supplier</label>
-            <input
-              type="text"
-              name="supplier"
-              value={formData.supplier}
-              onChange={handleChange}
-              placeholder="e.g., Fresh Imports"
-              className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
-            />
+            <label className="block text-sm font-medium text-foreground mb-1">{t("supplier")}</label>
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input
+                type="text"
+                name="supplier"
+                list="registered-suppliers"
+                value={formData.supplier}
+                onChange={handleChange}
+                placeholder="e.g., Fresh Imports"
+                className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
+              />
+              <Button type="button" variant="outline" className="bg-transparent" onClick={() => {
+                setSupplierToRegister(formData.supplier)
+                setShowSupplierForm((current) => !current)
+              }}>
+                {t("registerSupplier")}
+              </Button>
+            </div>
+            <datalist id="registered-suppliers">
+              {suppliers.map((supplier) => (
+                <option key={supplier} value={supplier} />
+              ))}
+            </datalist>
+            {suppliers.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {suppliers.map((supplier) => (
+                  <button
+                    type="button"
+                    key={supplier}
+                    onClick={() => setFormData((prev) => ({ ...prev, supplier }))}
+                    className="rounded-full border border-border bg-secondary/20 px-3 py-1 text-xs text-muted-foreground hover:border-accent hover:text-foreground"
+                  >
+                    {supplier}
+                  </button>
+                ))}
+              </div>
+            )}
+            {showSupplierForm && (
+              <div className="mt-3 rounded-lg border border-border bg-secondary/20 p-3 space-y-3">
+                <label className="block text-xs font-medium text-muted-foreground">{t("supplierName")}</label>
+                <input
+                  value={supplierToRegister}
+                  onChange={(event) => setSupplierToRegister(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent"
+                />
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={shouldSaveSupplier}
+                    onChange={(event) => setShouldSaveSupplier(event.target.checked)}
+                    className="h-4 w-4 accent-current"
+                  />
+                  {shouldSaveSupplier ? t("saveSupplier") : t("dontSaveSupplier")}
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button type="button" variant="outline" className="flex-1 bg-transparent" onClick={() => setShowSupplierForm(false)}>
+                    {t("cancel")}
+                  </Button>
+                  <Button type="button" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleRegisterSupplier}>
+                    {t("useSupplier")}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
             <Button type="button" onClick={onClose} variant="outline" className="flex-1 bg-transparent cursor-pointer">
-              Cancel
+              {t("cancel")}
             </Button>
-            <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer">
-              Add Item
+            <Button type="submit" disabled={isSaving} className="flex-1 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer">
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              {isSaving ? t("saving") : t("addItem")}
             </Button>
           </div>
         </form>

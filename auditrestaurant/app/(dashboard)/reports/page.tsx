@@ -1,34 +1,136 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ScatterChart, Scatter } from 'recharts'
 import { Button } from '@/components/ui/button'
-import { Download, Filter } from 'lucide-react'
+import { Download, FileText, Filter, Loader2, X } from 'lucide-react'
+import { useAppContext } from '@/components/app-context'
 
 export default function ReportsPage() {
+  const { selectedRestaurant, restaurants, formatCurrency, t } = useAppContext()
   const [selectedPeriod, setSelectedPeriod] = useState('month')
-  const [selectedRestaurant, setSelectedRestaurant] = useState('all')
+  const [isExportOpen, setIsExportOpen] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const allItems = selectedRestaurant.inventoryTypes.flatMap((type) => type.items)
+  const completedAudits = selectedRestaurant.audits.filter((audit) => audit.status === 'completed')
+  const complianceRate =
+    completedAudits.reduce((sum, audit) => sum + audit.compliance, 0) / Math.max(completedAudits.length, 1)
+  const issuesCount = allItems.filter((item) => item.status === 'low' || item.status === 'critical').length
+  const inventoryValue = allItems.reduce((sum, item) => sum + item.quantity * item.price, 0)
+  const avgIssuesPerAudit = issuesCount / Math.max(selectedRestaurant.audits.length, 1)
+  const avgAuditTime = Math.round(
+    completedAudits.reduce((sum, audit) => sum + 35 + audit.flaggedItems * 4 + Math.ceil(audit.totalItems / 2), 0) /
+      Math.max(completedAudits.length, 1),
+  )
 
-  const restaurants = ['all', 'Downtown Bistro', 'Sunset Grill', 'Harbor Seafood', 'Valley Restaurant', 'Garden Cafe']
+  const auditTrendData = useMemo(() => {
+    return completedAudits
+      .slice()
+      .sort((a, b) => a.createdDate.localeCompare(b.createdDate))
+      .map((audit, index) => ({
+        day: audit.completedDate ?? audit.createdDate,
+        completed: index + 1,
+        compliance: audit.compliance,
+      }))
+  }, [completedAudits])
+
+  const issuesByCategoryData = useMemo(() => {
+    return Object.values(
+      allItems.reduce<Record<string, { category: string; issues: number }>>((acc, item) => {
+        acc[item.category] ??= { category: item.category, issues: 0 }
+        if (item.status === 'low' || item.status === 'critical' || (item.daysUntilExpiry && item.daysUntilExpiry <= 7)) {
+          acc[item.category].issues += 1
+        }
+        return acc
+      }, {}),
+    ).filter((entry) => entry.issues > 0)
+  }, [allItems])
+
+  const complianceData = useMemo(() => {
+    return selectedRestaurant.inventoryTypes.map((inventory) => {
+      const inventoryAudits = selectedRestaurant.audits.filter((audit) => audit.inventoryId === inventory.id)
+      return {
+        name: inventory.name,
+        compliance:
+          inventoryAudits.reduce((sum, audit) => sum + audit.compliance, 0) / Math.max(inventoryAudits.length, 1),
+      }
+    })
+  }, [selectedRestaurant])
+
+  const severityData = useMemo(() => {
+    const critical = allItems.filter((item) => item.status === 'critical').length
+    const low = allItems.filter((item) => item.status === 'low').length
+    const expiring = allItems.filter((item) => item.daysUntilExpiry && item.daysUntilExpiry <= 7).length
+    const stable = Math.max(allItems.length - critical - low - expiring, 0)
+    return [
+      { name: t('critical'), value: critical, color: 'var(--destructive)' },
+      { name: t('lowStock'), value: low, color: 'var(--primary)' },
+      { name: t('expiringSoon'), value: expiring, color: 'var(--accent)' },
+      { name: t('stable'), value: stable, color: 'var(--muted-foreground)' },
+    ].filter((entry) => entry.value > 0)
+  }, [allItems, t])
+
+  const scatterData = useMemo(() => {
+    return completedAudits.map((audit) => ({
+      duration: 35 + audit.flaggedItems * 4 + Math.ceil(audit.totalItems / 2),
+      issues: audit.flaggedItems,
+    }))
+  }, [completedAudits])
+
+  const weeklyData = useMemo(() => {
+    const buckets = completedAudits.slice(0, 5).map((audit, index) => ({
+      week: `${t('completed')} ${index + 1}`,
+      auditsCompleted: index + 1,
+      avgComplianceRate: audit.compliance,
+      issuesFound: audit.flaggedItems,
+    }))
+    return buckets.length ? buckets : [{ week: t('completed'), auditsCompleted: 0, avgComplianceRate: 0, issuesFound: issuesCount }]
+  }, [completedAudits, issuesCount, t])
+
+  const exportReport = () => {
+    setIsExporting(true)
+    window.setTimeout(() => {
+      const rows = [
+        ['Restaurant', selectedRestaurant.name],
+        ['Period', selectedPeriod],
+        ['Inventory Value', inventoryValue],
+        ['Total Audits', selectedRestaurant.audits.length],
+        ['Completed Audits', completedAudits.length],
+        ['Compliance Rate', complianceRate.toFixed(1)],
+        ['Inventory Issues', issuesCount],
+      ]
+      const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${selectedRestaurant.name.replace(/\s+/g, '-').toLowerCase()}-report.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      setIsExporting(false)
+    }, 400)
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <Header />
         <main className="p-6 space-y-6">
           {/* Page Header */}
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Reports & Analytics</h1>
-              <p className="text-muted-foreground mt-1">Track audit performance and inventory insights</p>
+              <h1 className="text-3xl font-bold text-foreground">{t('reports')}</h1>
+              <p className="text-muted-foreground mt-1">{t('reportsSubtitle')} {selectedRestaurant.name}</p>
             </div>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2" onClick={() => setIsExportOpen(true)}>
               <Download size={20} />
-              Export Report
+              {t('exportReport')}
             </Button>
           </div>
 
@@ -36,28 +138,28 @@ export default function ReportsPage() {
           <Card className="bg-card border-border">
             <CardContent className="pt-6 flex flex-wrap gap-4">
               <div>
-                <label className="text-sm font-medium text-foreground block mb-2">Period</label>
+                <label className="text-sm font-medium text-foreground block mb-2">{t('period')}</label>
                 <select
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
                   className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
                 >
-                  <option value="week">Last Week</option>
-                  <option value="month">Last Month</option>
-                  <option value="quarter">Last Quarter</option>
-                  <option value="year">Last Year</option>
+                  <option value="week">{t('lastWeek')}</option>
+                  <option value="month">{t('lastMonth')}</option>
+                  <option value="quarter">{t('lastQuarter')}</option>
+                  <option value="year">{t('lastYear')}</option>
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground block mb-2">Restaurant</label>
+                <label className="text-sm font-medium text-foreground block mb-2">{t('restaurant')}</label>
                 <select
-                  value={selectedRestaurant}
-                  onChange={(e) => setSelectedRestaurant(e.target.value)}
+                  value={selectedRestaurant.id}
+                  disabled
                   className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
                 >
                   {restaurants.map(r => (
-                    <option key={r} value={r} className="bg-secondary">
-                      {r === 'all' ? 'All Restaurants' : r}
+                    <option key={r.id} value={r.id} className="bg-secondary">
+                      {r.name}
                     </option>
                   ))}
                 </select>
@@ -65,7 +167,7 @@ export default function ReportsPage() {
               <div className="flex items-end">
                 <Button variant="outline" className="gap-2">
                   <Filter size={16} />
-                  Apply Filters
+                  {t('applyFilters')}
                 </Button>
               </div>
             </CardContent>
@@ -75,37 +177,37 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Avg Issues per Audit</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t('avgIssuesPerAudit')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-foreground">3.4</p>
+                <p className="text-2xl font-bold text-foreground">{avgIssuesPerAudit.toFixed(1)}</p>
                 <p className="text-xs text-destructive mt-1">↑ 5% from last period</p>
               </CardContent>
             </Card>
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Compliance Rate</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t('complianceRate')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-accent">92.3%</p>
+                <p className="text-2xl font-bold text-accent">{complianceRate.toFixed(1)}%</p>
                 <p className="text-xs text-accent mt-1">↑ 2.1% from last period</p>
               </CardContent>
             </Card>
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Avg Audit Time</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t('avgAuditTime')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-foreground">45 min</p>
+                <p className="text-2xl font-bold text-foreground">{avgAuditTime} min</p>
                 <p className="text-xs text-accent mt-1">↓ 8% faster than last period</p>
               </CardContent>
             </Card>
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Total Audits</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t('totalAudits')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-primary">156</p>
+                <p className="text-2xl font-bold text-primary">{selectedRestaurant.audits.length}</p>
                 <p className="text-xs text-accent mt-1">↑ 12 from last period</p>
               </CardContent>
             </Card>
@@ -116,8 +218,8 @@ export default function ReportsPage() {
             {/* Audit Completion Trend */}
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>Audit Completion Trend</CardTitle>
-                <CardDescription>Last 30 days</CardDescription>
+                <CardTitle>{t('auditCompletionTrend')}</CardTitle>
+                <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -155,8 +257,8 @@ export default function ReportsPage() {
             {/* Issues by Category */}
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>Issues by Category</CardTitle>
-                <CardDescription>Most common problem areas</CardDescription>
+                <CardTitle>{t('issuesByCategory')}</CardTitle>
+                <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -180,8 +282,8 @@ export default function ReportsPage() {
             {/* Compliance by Restaurant */}
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>Compliance by Restaurant</CardTitle>
-                <CardDescription>Performance comparison</CardDescription>
+                <CardTitle>{t('complianceByInventory')}</CardTitle>
+                <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -205,8 +307,8 @@ export default function ReportsPage() {
             {/* Issue Severity Distribution */}
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>Issue Severity</CardTitle>
-                <CardDescription>Distribution overview</CardDescription>
+                <CardTitle>{t('issueSeverity')}</CardTitle>
+                <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center">
                 <ResponsiveContainer width="100%" height={300}>
@@ -239,8 +341,8 @@ export default function ReportsPage() {
             {/* Audit Duration vs Issues */}
             <Card className="bg-card border-border lg:col-span-2">
               <CardHeader>
-                <CardTitle>Audit Duration vs Issues Found</CardTitle>
-                <CardDescription>Correlation analysis</CardDescription>
+                <CardTitle>{t('auditDurationIssues')}</CardTitle>
+                <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -267,8 +369,8 @@ export default function ReportsPage() {
             {/* Weekly Performance */}
             <Card className="bg-card border-border lg:col-span-2">
               <CardHeader>
-                <CardTitle>Weekly Performance Metrics</CardTitle>
-                <CardDescription>Multi-metric comparison</CardDescription>
+                <CardTitle>{t('weeklyPerformance')}</CardTitle>
+                <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -312,64 +414,55 @@ export default function ReportsPage() {
           </div>
         </main>
       </div>
+      {isExportOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-3xl rounded-lg border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border p-6">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">{t('reportSummary')}</h2>
+                <p className="text-sm text-muted-foreground">{selectedRestaurant.name}</p>
+              </div>
+              <button onClick={() => setIsExportOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X size={22} />
+              </button>
+            </div>
+            <div className="space-y-6 p-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('inventoryValue')}</p>
+                  <p className="mt-1 break-words text-xl font-bold text-foreground">{formatCurrency(inventoryValue)}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('completed')}</p>
+                  <p className="mt-1 text-2xl font-bold text-accent">{completedAudits.length}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('inventoryIssues')}</p>
+                  <p className="mt-1 text-2xl font-bold text-destructive">{issuesCount}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('complianceRate')}</p>
+                  <p className="mt-1 text-2xl font-bold text-primary">{complianceRate.toFixed(1)}%</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                <p className="text-sm text-muted-foreground">
+                  {t('totalAudits')}: <span className="font-semibold text-foreground">{selectedRestaurant.audits.length}</span> · {t('avgAuditTime')}: <span className="font-semibold text-foreground">{avgAuditTime} min</span> · {t('period')}: <span className="font-semibold text-foreground">{selectedPeriod}</span>
+                </p>
+              </div>
+              <div className="flex justify-end gap-3 border-t border-border pt-4">
+                <Button variant="outline" className="bg-transparent" onClick={() => setIsExportOpen(false)}>
+                  {t('cancel')}
+                </Button>
+                <Button onClick={exportReport} disabled={isExporting} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                  {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                  {isExporting ? t('exporting') : t('export')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
-// Sample Data
-const auditTrendData = [
-  { day: 'Day 1', completed: 5 },
-  { day: 'Day 2', completed: 8 },
-  { day: 'Day 3', completed: 6 },
-  { day: 'Day 4', completed: 12 },
-  { day: 'Day 5', completed: 10 },
-  { day: 'Day 6', completed: 14 },
-  { day: 'Day 7', completed: 16 },
-  { day: 'Day 8', completed: 13 },
-  { day: 'Day 9', completed: 18 },
-  { day: 'Day 10', completed: 20 },
-]
-
-const issuesByCategoryData = [
-  { category: 'Produce', issues: 12 },
-  { category: 'Dairy', issues: 8 },
-  { category: 'Meat', issues: 15 },
-  { category: 'Grains', issues: 5 },
-  { category: 'Oils', issues: 3 },
-]
-
-const complianceData = [
-  { name: 'Downtown Bistro', compliance: 95 },
-  { name: 'Sunset Grill', compliance: 88 },
-  { name: 'Harbor Seafood', compliance: 92 },
-  { name: 'Valley Restaurant', compliance: 90 },
-  { name: 'Garden Cafe', compliance: 87 },
-]
-
-const severityData = [
-  { name: 'Critical', value: 8, color: 'var(--destructive)' },
-  { name: 'High', value: 22, color: 'var(--primary)' },
-  { name: 'Medium', value: 35, color: 'var(--accent)' },
-  { name: 'Low', value: 45, color: 'var(--muted-foreground)' },
-]
-
-const scatterData = [
-  { duration: 30, issues: 2 },
-  { duration: 35, issues: 3 },
-  { duration: 40, issues: 4 },
-  { duration: 45, issues: 5 },
-  { duration: 50, issues: 6 },
-  { duration: 55, issues: 7 },
-  { duration: 60, issues: 8 },
-  { duration: 65, issues: 9 },
-  { duration: 70, issues: 10 },
-  { duration: 75, issues: 11 },
-]
-
-const weeklyData = [
-  { week: 'Week 1', auditsCompleted: 12, avgComplianceRate: 88, issuesFound: 8 },
-  { week: 'Week 2', auditsCompleted: 15, avgComplianceRate: 90, issuesFound: 10 },
-  { week: 'Week 3', auditsCompleted: 18, avgComplianceRate: 92, issuesFound: 12 },
-  { week: 'Week 4', auditsCompleted: 22, avgComplianceRate: 91, issuesFound: 14 },
-  { week: 'Week 5', auditsCompleted: 25, avgComplianceRate: 93, issuesFound: 16 },
-]

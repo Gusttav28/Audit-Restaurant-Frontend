@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { X, Plus, Trash2, Package } from "lucide-react"
+import { X, Plus, Trash2, Package, Pencil, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface InventoryType {
@@ -31,6 +31,9 @@ export default function ManageTypesModal({
   const [isAdding, setIsAdding] = useState(false)
   const [newTypeName, setNewTypeName] = useState("")
   const [newTypeColor, setNewTypeColor] = useState("#3b82f6")
+  const [editingTypeId, setEditingTypeId] = useState<number | null>(null)
+  const [editingTypeName, setEditingTypeName] = useState("")
+  const [editingTypeColor, setEditingTypeColor] = useState("#3b82f6")
 
   const predefinedColors = [
     "#3b82f6", // blue
@@ -49,6 +52,21 @@ export default function ManageTypesModal({
       setNewTypeName("")
       setNewTypeColor("#3b82f6")
       setIsAdding(false)
+    }
+  }
+
+  const startEditingType = (type: InventoryType) => {
+    setEditingTypeId(type.id)
+    setEditingTypeName(type.name)
+    setEditingTypeColor(type.color)
+  }
+
+  const handleSaveType = () => {
+    if (editingTypeId && editingTypeName.trim()) {
+      onUpdateType(editingTypeId, { name: editingTypeName.trim(), color: editingTypeColor })
+      setEditingTypeId(null)
+      setEditingTypeName("")
+      setEditingTypeColor("#3b82f6")
     }
   }
 
@@ -77,33 +95,83 @@ export default function ManageTypesModal({
         <div className="p-6 space-y-4">
           {/* Existing Types List */}
           <div className="space-y-2">
-            {inventoryTypes.map((type) => (
-              <div
-                key={type.id}
-                className="flex items-center justify-between p-4 bg-secondary/30 border border-border rounded-lg hover:bg-secondary/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: type.color }} />
-                  <span className="font-medium text-foreground">{type.name}</span>
+            {inventoryTypes.map((type) => {
+              const isEditing = editingTypeId === type.id
+
+              return (
+                <div
+                  key={type.id}
+                  className="p-4 bg-secondary/30 border border-border rounded-lg hover:bg-secondary/50 transition-colors"
+                >
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                        <input
+                          type="text"
+                          value={editingTypeName}
+                          onChange={(event) => setEditingTypeName(event.target.value)}
+                          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
+                        />
+                        <input
+                          type="color"
+                          value={editingTypeColor}
+                          onChange={(event) => setEditingTypeColor(event.target.value)}
+                          className="h-10 w-full rounded-lg border-2 border-border cursor-pointer sm:w-12"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1 bg-transparent"
+                          onClick={() => setEditingTypeId(null)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+                          onClick={handleSaveType}
+                          disabled={!editingTypeName.trim()}
+                        >
+                          <Check size={16} />
+                          Save Type
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="w-4 h-4 shrink-0 rounded-full" style={{ backgroundColor: type.color }} />
+                        <span className="truncate font-medium text-foreground">{type.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-accent hover:bg-accent/10"
+                          onClick={() => startEditingType(type)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            if (
+                              confirm(`Are you sure you want to delete ${type.name}? All items in this type will be removed.`)
+                            ) {
+                              onDeleteType(type.id)
+                            }
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => {
-                      if (
-                        confirm(`Are you sure you want to delete ${type.name}? All items in this type will be removed.`)
-                      ) {
-                        onDeleteType(type.id)
-                      }
-                    }}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Add New Type Section */}

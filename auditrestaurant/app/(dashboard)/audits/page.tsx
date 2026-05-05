@@ -7,7 +7,9 @@ import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
 import AuditsTable from '@/components/audits/audits-table'
 import CreateAuditModal from '@/components/audits/create-audit-modal'
-import { Plus, Search, ClipboardList, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { Plus, Search, ClipboardList, CheckCircle, Clock, AlertCircle, Trash2, X } from 'lucide-react'
+import { useAppContext } from '@/components/app-context'
+import Link from 'next/link'
 
 // Shared types for the audit system
 export interface InventoryItem {
@@ -204,12 +206,77 @@ const initialAudits: Audit[] = [
 ]
 
 export default function AuditsPage() {
+  const { selectedRestaurant, t, createAudit, deleteAudit, setSelectedInventoryId } = useAppContext()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [selectedInventory, setSelectedInventory] = useState('all')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [audits, setAudits] = useState<Audit[]>(initialAudits)
-  const [inventoryTypes, setInventoryTypes] = useState<InventoryType[]>(sampleInventoryTypes)
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const [deleteWord, setDeleteWord] = useState('')
+  const [deleteAuditIdInput, setDeleteAuditIdInput] = useState('')
+  const inventoryTypes = useMemo<InventoryType[]>(() => selectedRestaurant.inventoryTypes.map((type) => ({
+    id: type.id,
+    name: type.name,
+    color: type.color,
+    items: type.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      expectedQuantity: item.minStock,
+      availableQuantity: item.quantity,
+      unit: item.unit,
+      unitPrice: item.price,
+    })),
+  })), [selectedRestaurant])
+  const audits = useMemo<Audit[]>(() => {
+    return selectedRestaurant.audits.map((audit) => {
+      const inventory = inventoryTypes.find((type) => type.id === audit.inventoryId)
+      const mappedItems = audit.items?.map((item) => ({
+        itemId: item.itemId,
+        itemName: item.itemName,
+        category: item.category,
+        expectedQuantity: item.previousStock,
+        availableQuantity: item.previousStock,
+        countedQuantity: item.currentStock,
+        countedAvailable: item.currentStock,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        discrepancy: item.difference,
+        discrepancyValue: item.difference === null ? null : item.difference * item.unitPrice,
+        status: item.result === 'pending' ? 'pending' as const : item.result === 'discrepancy' ? 'flagged' as const : 'counted' as const,
+        notes: item.notes,
+      })) ?? (inventory?.items ?? []).map((item) => ({
+        itemId: item.id,
+        itemName: item.name,
+        category: item.category,
+        expectedQuantity: item.availableQuantity,
+        availableQuantity: item.availableQuantity,
+        countedQuantity: audit.status === 'completed' ? item.availableQuantity : null,
+        countedAvailable: audit.status === 'completed' ? item.availableQuantity : null,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        discrepancy: audit.status === 'completed' ? 0 : null,
+        discrepancyValue: audit.status === 'completed' ? 0 : null,
+        status: audit.status === 'completed' ? 'counted' as const : 'pending' as const,
+        notes: '',
+      }))
+      const countedItems = mappedItems.filter((item) => item.status !== 'pending').length
+
+      return {
+        ...audit,
+        items: mappedItems,
+        totalItems: mappedItems.length,
+        countedItems,
+        status: audit.status === 'completed' ? 'completed' : countedItems > 0 ? 'in-progress' : audit.status,
+      }
+    })
+  }, [selectedRestaurant, inventoryTypes])
+
+  React.useEffect(() => {
+    setSelectedInventory('all')
+    setSelectedStatus('all')
+    setSearchTerm('')
+  }, [selectedRestaurant.id])
 
   const filteredAudits = useMemo(() => {
     return audits.filter(audit => {
@@ -222,61 +289,27 @@ export default function AuditsPage() {
     })
   }, [searchTerm, selectedStatus, selectedInventory, audits])
 
-  const handleCreateAudit = (newAuditData: { inventoryId: number; auditor: string; notes: string }) => {
-    const selectedInventory = inventoryTypes.find(inv => inv.id === newAuditData.inventoryId)
-    if (!selectedInventory) return
-
-    const audit: Audit = {
-      id: `AUD-${String(audits.length + 1).padStart(4, '0')}`,
-      inventoryId: selectedInventory.id,
-      inventoryName: selectedInventory.name,
-      inventoryColor: selectedInventory.color,
-      auditor: newAuditData.auditor,
-      createdDate: new Date().toISOString().split('T')[0],
-      startedDate: null,
-      completedDate: null,
-      status: 'not-started',
-      items: selectedInventory.items.map(item => ({
-        itemId: item.id,
-        itemName: item.name,
-        category: item.category,
-        expectedQuantity: item.expectedQuantity,
-        availableQuantity: item.availableQuantity,
-        countedQuantity: null,
-        countedAvailable: null,
-        unit: item.unit,
-        unitPrice: item.unitPrice,
-        discrepancy: null,
-        discrepancyValue: null,
-        status: 'pending',
-        notes: ''
-      })),
-      totalItems: selectedInventory.items.length,
-      countedItems: 0,
-      flaggedItems: 0,
-      totalDiscrepancy: 0,
-      notes: newAuditData.notes
-    }
-    setAudits([audit, ...audits])
+  const handleCreateAudit = (newAuditData: { inventoryId: number; auditor: string; notes: string; auditDate: string }) => {
+    createAudit(newAuditData)
     setIsCreateModalOpen(false)
   }
 
   const handleUpdateAudit = (id: string, updatedData: Partial<Audit>) => {
-    setAudits(audits.map(audit => audit.id === id ? { ...audit, ...updatedData } : audit))
+    console.log('Audit updates are handled from the audit detail screen:', id, updatedData)
   }
 
   const handleDeleteAudit = (id: string) => {
-    setAudits(audits.filter(audit => audit.id !== id))
+    setDeleteTargetId(id)
+    setDeleteWord('')
+    setDeleteAuditIdInput('')
   }
 
-  const handleAddInventoryType = (newType: { name: string; color: string }) => {
-    const newInventory: InventoryType = {
-      id: inventoryTypes.length + 1,
-      name: newType.name,
-      color: newType.color,
-      items: []
-    }
-    setInventoryTypes([...inventoryTypes, newInventory])
+  const confirmDeleteAudit = () => {
+    if (!deleteTargetId || deleteWord !== 'delete' || deleteAuditIdInput !== deleteTargetId) return
+    deleteAudit(deleteTargetId)
+    setDeleteTargetId(null)
+    setDeleteWord('')
+    setDeleteAuditIdInput('')
   }
 
   const stats = {
@@ -289,21 +322,21 @@ export default function AuditsPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <Header />
-        <main className="p-6 space-y-6">
+        <main className="p-4 space-y-6 sm:p-6">
           {/* Page Header */}
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Inventory Audits</h1>
-              <p className="text-muted-foreground mt-1">Create and manage audits for your inventories</p>
+              <h1 className="text-3xl font-bold text-foreground">{t('inventoryAudits')}</h1>
+              <p className="text-muted-foreground mt-1">{t('auditsSubtitle')} {selectedRestaurant.name}</p>
             </div>
             <Button 
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2 sm:w-auto"
             >
               <Plus size={20} />
-              New Audit
+              {t('newAudit')}
             </Button>
           </div>
 
@@ -313,19 +346,19 @@ export default function AuditsPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                   <ClipboardList size={16} />
-                  Total Audits
+                  {t('totalAudits')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                <p className="text-xs text-muted-foreground mt-1">All time</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('allTime')}</p>
               </CardContent>
             </Card>
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                   <CheckCircle size={16} className="text-accent" />
-                  Completed
+                  {t('completed')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -337,24 +370,24 @@ export default function AuditsPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                   <Clock size={16} className="text-primary" />
-                  In Progress
+                  {t('inProgress')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-primary">{stats.inProgress}</p>
-                <p className="text-xs text-muted-foreground mt-1">Active audits</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('activeAudits')}</p>
               </CardContent>
             </Card>
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                   <AlertCircle size={16} />
-                  Not Started
+                  {t('notStarted')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-muted-foreground">{stats.notStarted}</p>
-                <p className="text-xs text-muted-foreground mt-1">Awaiting action</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('awaitingAction')}</p>
               </CardContent>
             </Card>
           </div>
@@ -362,7 +395,11 @@ export default function AuditsPage() {
           {/* Inventory Type Quick View */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {inventoryTypes.map(inv => (
-              <Card key={inv.id} className="bg-card border-border hover:border-primary/50 transition-colors cursor-pointer">
+              <Link key={inv.id} href={`/audits?inventory=${inv.id}`} onClick={() => {
+                setSelectedInventory(inv.id.toString())
+                setSelectedInventoryId(inv.id)
+              }}>
+              <Card className="bg-card border-border hover:border-primary/50 transition-colors cursor-pointer">
                 <CardContent className="pt-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -383,16 +420,17 @@ export default function AuditsPage() {
                   </div>
                 </CardContent>
               </Card>
+              </Link>
             ))}
           </div>
 
           {/* Audits Table */}
           <Card className="bg-card border-border">
             <CardHeader>
-              <div className="flex justify-between items-start">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <CardTitle>Audit List</CardTitle>
-                  <CardDescription>View and manage your inventory audits</CardDescription>
+                  <CardTitle>{t('auditList')}</CardTitle>
+                  <CardDescription>{t('auditListSubtitle')}</CardDescription>
                 </div>
                 <span className="text-xs font-medium text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full">
                   {filteredAudits.length} audits
@@ -455,8 +493,58 @@ export default function AuditsPage() {
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={handleCreateAudit}
         inventoryTypes={inventoryTypes}
-        onAddInventoryType={handleAddInventoryType}
       />
+      {deleteTargetId && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-lg border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
+                  <Trash2 size={20} className="text-destructive" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">{t('deleteAuditTitle')}</h2>
+                  <p className="text-sm text-muted-foreground">{deleteTargetId}</p>
+                </div>
+              </div>
+              <button onClick={() => setDeleteTargetId(null)} className="text-muted-foreground hover:text-foreground">
+                <X size={22} />
+              </button>
+            </div>
+            <div className="space-y-4 p-6">
+              <p className="text-sm text-muted-foreground">{t('deleteAuditBody')}</p>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-foreground">{t('typeDelete')}</label>
+                <input
+                  value={deleteWord}
+                  onChange={(event) => setDeleteWord(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-foreground">{t('typeAuditId')}</label>
+                <input
+                  value={deleteAuditIdInput}
+                  onChange={(event) => setDeleteAuditIdInput(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 font-mono text-sm text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 border-t border-border p-6 sm:flex-row">
+              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setDeleteTargetId(null)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteWord !== 'delete' || deleteAuditIdInput !== deleteTargetId}
+                onClick={confirmDeleteAudit}
+              >
+                {t('deleteAudit')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

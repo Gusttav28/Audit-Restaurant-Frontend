@@ -86,11 +86,12 @@ export default function AuditsTable({ audits, onUpdateAudit, onDeleteAudit }: Au
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="min-w-[900px] w-full text-sm">
         <thead>
           <tr className="border-b border-border">
             <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Audit ID</th>
             <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Inventory</th>
+            <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Date</th>
             <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Auditor</th>
             <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Status</th>
             <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Progress</th>
@@ -102,7 +103,9 @@ export default function AuditsTable({ audits, onUpdateAudit, onDeleteAudit }: Au
           {audits.length > 0 ? (
             audits.map((audit) => (
               <tr key={audit.id} className="border-b border-border hover:bg-secondary/20 transition-colors">
-                <td className="py-3 px-4 font-mono text-xs font-bold text-accent">{audit.id}</td>
+                <td className="py-3 px-4 font-mono text-xs font-bold text-accent">
+                  <Link href={`/audits/${audit.id}`} className="hover:underline">{audit.id}</Link>
+                </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <div 
@@ -117,6 +120,7 @@ export default function AuditsTable({ audits, onUpdateAudit, onDeleteAudit }: Au
                     </div>
                   </div>
                 </td>
+                <td className="py-3 px-4 text-muted-foreground text-sm">{audit.createdDate}</td>
                 <td className="py-3 px-4 text-muted-foreground text-sm">{audit.auditor}</td>
                 <td className="py-3 px-4">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(audit.status)}`}>
@@ -183,7 +187,7 @@ export default function AuditsTable({ audits, onUpdateAudit, onDeleteAudit }: Au
             ))
           ) : (
             <tr>
-              <td colSpan={7} className="py-8 text-center text-muted-foreground">
+              <td colSpan={8} className="py-8 text-center text-muted-foreground">
                 No audits found. Create a new audit to get started.
               </td>
             </tr>

@@ -1,745 +1,696 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ArrowLeft, CheckCircle, Clock, Download, Edit2, FileText, Loader2, MessageSquare, Save, Search, TriangleAlert, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
-import { 
-  ArrowLeft, Download, CheckCircle, Clock, AlertCircle, Package, 
-  Search, Filter, Flag, Save, Check, X as XIcon, MessageSquare, Plus, Send, User
-} from 'lucide-react'
-import Link from 'next/link'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-
-interface AuditItem {
-  itemId: number
-  itemName: string
-  category: string
-  expectedQuantity: number
-  availableQuantity: number
-  countedQuantity: number | null
-  countedAvailable: number | null
-  unit: string
-  unitPrice: number
-  discrepancy: number | null
-  discrepancyValue: number | null
-  status: 'pending' | 'counted' | 'flagged'
-  notes: string
-}
-
-interface AuditComment {
-  id: number
-  author: string
-  content: string
-  timestamp: string
-  type: 'general' | 'discrepancy' | 'issue'
-}
-
-interface Audit {
-  id: string
-  inventoryId: number
-  inventoryName: string
-  inventoryColor: string
-  auditor: string
-  createdDate: string
-  startedDate: string | null
-  completedDate: string | null
-  status: 'not-started' | 'in-progress' | 'completed'
-  items: AuditItem[]
-  totalItems: number
-  countedItems: number
-  flaggedItems: number
-  totalDiscrepancy: number
-  notes: string
-  comments: AuditComment[]
-}
-
-// Sample audit data
-const sampleAudit: Audit = {
-  id: 'AUD-0002',
-  inventoryId: 2,
-  inventoryName: 'Bar',
-  inventoryColor: '#8b5cf6',
-  auditor: 'Sarah Johnson',
-  createdDate: '2024-01-12',
-  startedDate: '2024-01-12',
-  completedDate: null,
-  status: 'in-progress',
-  items: [
-    { itemId: 9, itemName: 'Vodka', category: 'Spirits', expectedQuantity: 15, availableQuantity: 12, countedQuantity: 14, countedAvailable: 11, unit: 'bottles', unitPrice: 28.0, discrepancy: -1, discrepancyValue: -28.0, status: 'counted', notes: '' },
-    { itemId: 10, itemName: 'Tonic Water', category: 'Mixers', expectedQuantity: 24, availableQuantity: 18, countedQuantity: 22, countedAvailable: 16, unit: 'bottles', unitPrice: 2.5, discrepancy: -2, discrepancyValue: -5.0, status: 'counted', notes: 'Some bottles damaged' },
-    { itemId: 11, itemName: 'Fresh Mint', category: 'Garnishes', expectedQuantity: 8, availableQuantity: 3, countedQuantity: 6, countedAvailable: 2, unit: 'bundles', unitPrice: 2.5, discrepancy: -2, discrepancyValue: -5.0, status: 'flagged', notes: 'Significant shortage - investigate' },
-    { itemId: 12, itemName: 'Lemons', category: 'Garnishes', expectedQuantity: 10, availableQuantity: 8, countedQuantity: 10, countedAvailable: 8, unit: 'kg', unitPrice: 3.0, discrepancy: 0, discrepancyValue: 0, status: 'counted', notes: '' },
-    { itemId: 13, itemName: 'Red Wine', category: 'Wine', expectedQuantity: 20, availableQuantity: 15, countedQuantity: 19, countedAvailable: 14, unit: 'bottles', unitPrice: 35.0, discrepancy: -1, discrepancyValue: -35.0, status: 'counted', notes: '' },
-    { itemId: 14, itemName: 'Whiskey', category: 'Spirits', expectedQuantity: 10, availableQuantity: 8, countedQuantity: null, countedAvailable: null, unit: 'bottles', unitPrice: 45.0, discrepancy: null, discrepancyValue: null, status: 'pending', notes: '' },
-    { itemId: 15, itemName: 'Beer (Lager)', category: 'Beer', expectedQuantity: 48, availableQuantity: 36, countedQuantity: null, countedAvailable: null, unit: 'bottles', unitPrice: 3.5, discrepancy: null, discrepancyValue: null, status: 'pending', notes: '' },
-    { itemId: 16, itemName: 'Orange Juice', category: 'Mixers', expectedQuantity: 12, availableQuantity: 10, countedQuantity: null, countedAvailable: null, unit: 'L', unitPrice: 4.0, discrepancy: null, discrepancyValue: null, status: 'pending', notes: '' },
-  ],
-  totalItems: 8,
-  countedItems: 5,
-  flaggedItems: 1,
-  totalDiscrepancy: -73.0,
-  notes: 'Bar audit in progress',
-  comments: [
-    { id: 1, author: 'Sarah Johnson', content: 'Started bar inventory audit. Will focus on spirits and mixers first.', timestamp: '2024-01-12 09:00', type: 'general' },
-    { id: 2, author: 'Sarah Johnson', content: 'Found discrepancy in Fresh Mint - appears some bundles spoiled and were discarded without logging.', timestamp: '2024-01-12 10:30', type: 'discrepancy' },
-    { id: 3, author: 'Manager', content: 'Please verify vodka count - we had a delivery yesterday that may not be logged.', timestamp: '2024-01-12 11:15', type: 'issue' },
-  ]
-}
+import { useAppContext } from '@/components/app-context'
 
 export default function AuditDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const [audit, setAudit] = useState<Audit>(sampleAudit)
+  const { id } = React.use(params)
+  const { selectedRestaurant, updateAuditItem, completeAudit, reopenAudit, addAuditComment, formatCurrency, t } = useAppContext()
+  const audit = selectedRestaurant.audits.find((candidate) => candidate.id === id)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'counted' | 'flagged'>('all')
-  const [editingItem, setEditingItem] = useState<number | null>(null)
-  const [tempValues, setTempValues] = useState<{ countedQuantity: string; countedAvailable: string; notes: string }>({
-    countedQuantity: '',
-    countedAvailable: '',
-    notes: ''
-  })
-  const [showAddComment, setShowAddComment] = useState(false)
-  const [newComment, setNewComment] = useState('')
-  const [commentType, setCommentType] = useState<'general' | 'discrepancy' | 'issue'>('general')
+  const [draftValues, setDraftValues] = useState<Record<number, string>>({})
+  const [editingRows, setEditingRows] = useState<Record<number, boolean>>({})
+  const [savingRows, setSavingRows] = useState<Record<number, boolean>>({})
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [isAddingComment, setIsAddingComment] = useState(false)
+  const [isSavingComment, setIsSavingComment] = useState(false)
+  const [isExporting, setIsExporting] = useState<null | 'csv' | 'pdf'>(null)
+  const [commentText, setCommentText] = useState('')
 
-  const filteredItems = useMemo(() => {
-    return audit.items.filter(item => {
-      const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          item.category.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesFilter = filterStatus === 'all' || item.status === filterStatus
-      return matchesSearch && matchesFilter
-    })
-  }, [audit.items, searchTerm, filterStatus])
+  const auditItems = useMemo(() => {
+    if (!audit) return []
+    return audit.items?.length
+      ? audit.items
+      : selectedRestaurant.inventoryTypes
+          .find((type) => type.id === audit.inventoryId)
+          ?.items.map((item) => ({
+            itemId: item.id,
+            itemName: item.name,
+            category: item.category,
+            previousStock: item.quantity,
+            currentStock: null,
+            unit: item.unit,
+            unitPrice: item.price,
+            difference: null,
+            result: 'pending' as const,
+            notes: '',
+          })) ?? []
+  }, [audit, selectedRestaurant.inventoryTypes])
 
-  const stats = useMemo(() => {
-    const counted = audit.items.filter(i => i.status === 'counted' || i.status === 'flagged').length
-    const flagged = audit.items.filter(i => i.status === 'flagged').length
-    const pending = audit.items.filter(i => i.status === 'pending').length
-    const totalDiscrepancy = audit.items.reduce((sum, item) => sum + (item.discrepancyValue || 0), 0)
-    const totalExpectedValue = audit.items.reduce((sum, item) => sum + (item.expectedQuantity * item.unitPrice), 0)
-    const totalCountedValue = audit.items.reduce((sum, item) => {
-      if (item.countedQuantity !== null) {
-        return sum + (item.countedQuantity * item.unitPrice)
-      }
-      return sum
-    }, 0)
-    
-    return { counted, flagged, pending, totalDiscrepancy, totalExpectedValue, totalCountedValue }
-  }, [audit.items])
+  const items = useMemo(() => {
+    return auditItems.filter((item) =>
+      item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+  }, [auditItems, searchTerm])
 
-  const progress = Math.round((stats.counted / audit.totalItems) * 100)
-
-  const handleStartEdit = (item: AuditItem) => {
-    setEditingItem(item.itemId)
-    setTempValues({
-      countedQuantity: item.countedQuantity?.toString() || '',
-      countedAvailable: item.countedAvailable?.toString() || '',
-      notes: item.notes
-    })
+  if (!audit) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <div className="min-w-0 flex-1">
+          <Header />
+          <main className="p-6">
+            <Card className="bg-card border-border">
+              <CardContent className="flex flex-col items-center justify-center gap-3 py-16">
+                <TriangleAlert size={34} className="text-muted-foreground" />
+                <p className="text-muted-foreground">{t('auditNotFound')} for {selectedRestaurant.name}.</p>
+                <Link href="/audits">
+                  <Button variant="outline" className="bg-transparent">{t('backToAudits')}</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
+      </div>
+    )
   }
+
+  const totalInventoryItems = auditItems.length
+  const countedItems = auditItems.filter((item) => item.result !== 'pending').length
+  const progress = Math.round((countedItems / Math.max(totalInventoryItems, 1)) * 100)
+  const canComplete = totalInventoryItems > 0 && countedItems === totalInventoryItems
+  const isCompleted = audit.status === 'completed'
+  const displayStatus = audit.status === 'completed' ? 'completed' : 'in-progress'
+  const soldUnits = auditItems.reduce((sum, item) => sum + Math.max(item.difference ?? 0, 0), 0)
+  const salesImpact = auditItems.reduce((sum, item) => sum + Math.max(item.difference ?? 0, 0) * item.unitPrice, 0)
+  const discrepancyImpact = auditItems.reduce((sum, item) => sum + Math.abs(Math.min(item.difference ?? 0, 0)) * item.unitPrice, 0)
+  const countedValue = auditItems.reduce((sum, item) => sum + (item.currentStock ?? 0) * item.unitPrice, 0)
+  const previousValue = auditItems.reduce((sum, item) => sum + item.previousStock * item.unitPrice, 0)
+  const resultData = [
+    { name: t('sold'), value: auditItems.filter((item) => item.result === 'sold').length, color: 'var(--accent)' },
+    { name: t('discrepancy'), value: auditItems.filter((item) => item.result === 'discrepancy').length, color: 'var(--destructive)' },
+    { name: t('matched'), value: auditItems.filter((item) => item.result === 'matched').length, color: 'var(--primary)' },
+    { name: t('pending'), value: auditItems.filter((item) => item.result === 'pending').length, color: 'var(--muted-foreground)' },
+  ].filter((entry) => entry.value > 0)
+  const categoryData = Object.values(auditItems.reduce<Record<string, { category: string; sold: number; discrepancy: number }>>((acc, item) => {
+    acc[item.category] ??= { category: item.category, sold: 0, discrepancy: 0 }
+    acc[item.category].sold += Math.max(item.difference ?? 0, 0)
+    acc[item.category].discrepancy += Math.abs(Math.min(item.difference ?? 0, 0))
+    return acc
+  }, {}))
+  const comments = audit.comments ?? []
 
   const handleSaveItem = (itemId: number) => {
-    const countedQty = parseFloat(tempValues.countedQuantity) || 0
-    const countedAvail = parseFloat(tempValues.countedAvailable) || 0
-    
-    setAudit(prev => {
-      const updatedItems = prev.items.map(item => {
-        if (item.itemId === itemId) {
-          const discrepancy = countedQty - item.expectedQuantity
-          const discrepancyValue = discrepancy * item.unitPrice
-          const isFlagged = Math.abs(discrepancy) > (item.expectedQuantity * 0.1) // Flag if >10% discrepancy
-          
-          return {
-            ...item,
-            countedQuantity: countedQty,
-            countedAvailable: countedAvail,
-            discrepancy,
-            discrepancyValue,
-            status: isFlagged ? 'flagged' : 'counted' as const,
-            notes: tempValues.notes
-          }
-        }
-        return item
-      })
-      
-      const countedCount = updatedItems.filter(i => i.status === 'counted' || i.status === 'flagged').length
-      const flaggedCount = updatedItems.filter(i => i.status === 'flagged').length
-      const totalDisc = updatedItems.reduce((sum, i) => sum + (i.discrepancyValue || 0), 0)
-      
-      return {
-        ...prev,
-        items: updatedItems,
-        countedItems: countedCount,
-        flaggedItems: flaggedCount,
-        totalDiscrepancy: totalDisc
-      }
+    const item = items.find((candidate) => candidate.itemId === itemId)
+    if (!item) return
+    const rawValue = draftValues[itemId] ?? item.currentStock?.toString() ?? ''
+    const currentStock = Number.parseFloat(rawValue)
+    if (!Number.isFinite(currentStock)) return
+    setSavingRows((prev) => ({ ...prev, [itemId]: true }))
+    updateAuditItem(audit.id, itemId, currentStock)
+    window.setTimeout(() => {
+      setSavingRows((prev) => ({ ...prev, [itemId]: false }))
+      setEditingRows((prev) => ({ ...prev, [itemId]: false }))
+    }, 250)
+  }
+
+  const handleSaveAll = () => {
+    const changedItems = auditItems.filter((item) => {
+      const rawValue = draftValues[item.itemId]
+      if (rawValue === undefined || rawValue === '') return false
+      const currentStock = Number.parseFloat(rawValue)
+      return Number.isFinite(currentStock) && currentStock !== item.currentStock
     })
-    
-    setEditingItem(null)
-    setTempValues({ countedQuantity: '', countedAvailable: '', notes: '' })
-  }
 
-  const handleCancelEdit = () => {
-    setEditingItem(null)
-    setTempValues({ countedQuantity: '', countedAvailable: '', notes: '' })
-  }
+    changedItems.forEach((item) => {
+      const currentStock = Number.parseFloat(draftValues[item.itemId])
+      setSavingRows((prev) => ({ ...prev, [item.itemId]: true }))
+      updateAuditItem(audit.id, item.itemId, currentStock)
+    })
 
-  const handleFlagItem = (itemId: number) => {
-    setAudit(prev => ({
-      ...prev,
-      items: prev.items.map(item => 
-        item.itemId === itemId 
-          ? { ...item, status: item.status === 'flagged' ? 'counted' : 'flagged' as const }
-          : item
-      ),
-      flaggedItems: prev.items.filter(i => i.status === 'flagged').length
-    }))
-  }
-
-  const handleCompleteAudit = () => {
-    const pendingItems = audit.items.filter(i => i.status === 'pending')
-    if (pendingItems.length > 0) {
-      alert('Please count all items before completing the audit.')
-      return
-    }
-    
-    setAudit(prev => ({
-      ...prev,
-      status: 'completed',
-      completedDate: new Date().toISOString().split('T')[0]
-    }))
+    window.setTimeout(() => {
+      setSavingRows((prev) => {
+        const next = { ...prev }
+        changedItems.forEach((item) => {
+          next[item.itemId] = false
+        })
+        return next
+      })
+      setEditingRows((prev) => {
+        const next = { ...prev }
+        changedItems.forEach((item) => {
+          next[item.itemId] = false
+        })
+        return next
+      })
+    }, 300)
   }
 
   const handleAddComment = () => {
-    if (!newComment.trim()) return
-    
-    const now = new Date()
-    const timestamp = `${now.toISOString().split('T')[0]} ${now.toTimeString().slice(0, 5)}`
-    
-    const comment: AuditComment = {
-      id: audit.comments.length + 1,
+    if (!commentText.trim()) return
+    setIsSavingComment(true)
+    addAuditComment(audit.id, {
       author: audit.auditor,
-      content: newComment.trim(),
-      timestamp,
-      type: commentType
-    }
-    
-    setAudit(prev => ({
-      ...prev,
-      comments: [...prev.comments, comment]
-    }))
-    
-    setNewComment('')
-    setCommentType('general')
-    setShowAddComment(false)
+      content: commentText,
+    })
+    window.setTimeout(() => {
+      setCommentText('')
+      setIsAddingComment(false)
+      setIsSavingComment(false)
+    }, 250)
   }
 
-  const categoryData = useMemo(() => {
-    const categories = [...new Set(audit.items.map(i => i.category))]
-    return categories.map(cat => {
-      const items = audit.items.filter(i => i.category === cat)
-      return {
-        category: cat,
-        expected: items.reduce((sum, i) => sum + i.expectedQuantity, 0),
-        counted: items.reduce((sum, i) => sum + (i.countedQuantity || 0), 0),
-        discrepancy: items.reduce((sum, i) => sum + (i.discrepancy || 0), 0)
-      }
+  const handleExport = (type: 'csv' | 'pdf') => {
+    setIsExporting(type)
+    window.setTimeout(() => {
+      if (type === 'csv') exportCsv()
+      if (type === 'pdf') exportPdf()
+      setIsExporting(null)
+    }, 300)
+  }
+
+  const auditRows = auditItems.map((item) => ({
+    item: item.itemName,
+    category: item.category,
+    previousStock: item.previousStock,
+    currentStock: item.currentStock ?? '',
+    unit: item.unit,
+    difference: item.difference ?? '',
+    result: item.result,
+    unitPrice: item.unitPrice,
+    salesImpact: Math.max(item.difference ?? 0, 0) * item.unitPrice,
+    discrepancyImpact: Math.abs(Math.min(item.difference ?? 0, 0)) * item.unitPrice,
+  }))
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const exportCsv = () => {
+    const headers = ['Item', 'Category', 'Previous Stock', 'Current Stock', 'Unit', 'Difference', 'Result', 'Unit Price', 'Sales Impact', 'Discrepancy Impact']
+    const rows = auditRows.map((row) => [
+      row.item,
+      row.category,
+      row.previousStock,
+      row.currentStock,
+      row.unit,
+      row.difference,
+      row.result,
+      row.unitPrice,
+      row.salesImpact,
+      row.discrepancyImpact,
+    ])
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','))
+      .join('\n')
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `${audit.id}.csv`)
+  }
+
+  const exportPdf = () => {
+    const lines = [
+      `${audit.id} - ${audit.inventoryName}`,
+      `Date: ${audit.createdDate}`,
+      `Auditor: ${audit.auditor}`,
+      `Items audited: ${countedItems}/${totalInventoryItems}`,
+      `Sold value: ${formatCurrency(salesImpact)}`,
+      `Discrepancy value: ${formatCurrency(discrepancyImpact)}`,
+      '',
+      ...auditRows.map((row) =>
+        `${row.item} | previous ${row.previousStock} ${row.unit} | current ${row.currentStock} ${row.unit} | difference ${row.difference} | ${row.result} | sold ${formatCurrency(row.salesImpact)} | discrepancy ${formatCurrency(row.discrepancyImpact)}`,
+      ),
+    ]
+    const escaped = lines.join('\n').replace(/[()\\]/g, '\\$&')
+    const stream = `BT /F1 10 Tf 40 780 Td 12 TL (${escaped.replace(/\n/g, ') Tj T* (')}) Tj ET`
+    const objects = [
+      '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
+      '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+      '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj',
+      '4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
+      `5 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`,
+    ]
+    let pdf = '%PDF-1.4\n'
+    const offsets = [0]
+    objects.forEach((object) => {
+      offsets.push(pdf.length)
+      pdf += `${object}\n`
     })
-  }, [audit.items])
-
-  const statusDistribution = [
-    { name: 'Counted', value: stats.counted - stats.flagged, color: 'var(--accent)' },
-    { name: 'Flagged', value: stats.flagged, color: 'var(--destructive)' },
-    { name: 'Pending', value: stats.pending, color: 'var(--muted-foreground)' },
-  ]
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'counted':
-        return <CheckCircle className="text-accent" size={18} />
-      case 'flagged':
-        return <AlertCircle className="text-destructive" size={18} />
-      case 'pending':
-        return <Clock className="text-muted-foreground" size={18} />
-      default:
-        return null
-    }
+    const xrefStart = pdf.length
+    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
+    offsets.slice(1).forEach((offset) => {
+      pdf += `${String(offset).padStart(10, '0')} 00000 n \n`
+    })
+    pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`
+    downloadBlob(new Blob([pdf], { type: 'application/pdf' }), `${audit.id}.pdf`)
   }
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <Header />
-        <main className="p-6 space-y-6">
-          {/* Back Button */}
-          <Link href="/audits">
-            <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground bg-transparent">
-              <ArrowLeft size={18} />
-              Back to Audits
-            </Button>
-          </Link>
-
-          {/* Header Section */}
-          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-            <div className="flex items-start gap-4">
-              <div 
-                className="w-14 h-14 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: `${audit.inventoryColor}20` }}
-              >
-                <Package size={28} style={{ color: audit.inventoryColor }} />
-              </div>
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold text-foreground">{audit.inventoryName} Audit</h1>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    audit.status === 'completed' ? 'bg-accent/20 text-accent' :
-                    audit.status === 'in-progress' ? 'bg-primary/20 text-primary' :
-                    'bg-muted/20 text-muted-foreground'
-                  }`}>
-                    {audit.status === 'not-started' ? 'Not Started' : 
-                     audit.status === 'in-progress' ? 'In Progress' : 'Completed'}
-                  </span>
-                </div>
-                <p className="text-muted-foreground">
-                  <span className="font-mono text-accent">{audit.id}</span> • 
-                  Auditor: {audit.auditor} • 
-                  Created: {audit.createdDate}
-                </p>
-              </div>
+        <main className="p-4 space-y-6 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <Link href="/audits" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-3">
+                <ArrowLeft size={16} />
+                {t('backToAudits')}
+              </Link>
+              <h1 className="text-3xl font-bold text-foreground">{audit.id}</h1>
+              <p className="text-muted-foreground mt-1">
+                {audit.inventoryName} · {t('auditDate')}: {audit.createdDate} · {t('auditor')}: {audit.auditor}
+              </p>
             </div>
-            <div className="flex gap-2">
-              {audit.status === 'in-progress' && (
-                <Button 
-                  onClick={handleCompleteAudit}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
-                  disabled={stats.pending > 0}
-                >
-                  <CheckCircle size={18} />
-                  Complete Audit
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                onClick={() => {
+                  if (isCompleted) {
+                    reopenAudit(audit.id)
+                    setEditingRows({})
+                    return
+                  }
+                  setShowCompletionModal(true)
+                }}
+                disabled={!isCompleted && !canComplete}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+              >
+                {isCompleted ? <Edit2 size={18} /> : <CheckCircle size={18} />}
+                {isCompleted ? t('edit') : t('completed')}
+              </Button>
+              {isCompleted && (
+                <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setShowCompletionModal(true)}>
+                  <Download size={18} />
+                  {t('export')}
                 </Button>
               )}
-              <Button variant="outline" className="gap-2 bg-transparent">
-                <Download size={18} />
-                Export
-              </Button>
             </div>
           </div>
 
-          {/* Progress and Stats */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            {/* Progress Card */}
-            <Card className="bg-card border-border lg:col-span-2">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Audit Progress</p>
-                    <p className="text-3xl font-bold text-foreground">{progress}%</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Items Counted</p>
-                    <p className="text-xl font-bold text-foreground">{stats.counted} / {audit.totalItems}</p>
-                  </div>
-                </div>
-                <div className="w-full h-3 bg-secondary/30 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <div className="flex justify-between mt-3 text-xs text-muted-foreground">
-                  <span>{stats.pending} pending</span>
-                  <span>{stats.flagged} flagged</span>
-                </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center justify-between text-sm text-muted-foreground">
+                  {t('items')}
+                  {isCompleted && <CheckCircle size={16} className="text-accent" />}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-foreground">{countedItems}/{totalInventoryItems}</p>
+                <p className="text-xs text-accent mt-1">{progress}% {t('completed')}</p>
               </CardContent>
             </Card>
-
-            {/* Discrepancy Card */}
             <Card className="bg-card border-border">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground mb-1">Total Discrepancy</p>
-                <p className={`text-2xl font-bold ${stats.totalDiscrepancy < 0 ? 'text-destructive' : stats.totalDiscrepancy > 0 ? 'text-accent' : 'text-foreground'}`}>
-                  ${stats.totalDiscrepancy.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Expected: ${stats.totalExpectedValue.toFixed(2)}
-                </p>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center justify-between text-sm text-muted-foreground">
+                  {t('discrepancy')}
+                  {isCompleted && <CheckCircle size={16} className="text-accent" />}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-destructive">{audit.flaggedItems}</p>
+                <p className="text-xs text-muted-foreground mt-1">{formatCurrency(Math.abs(audit.totalDiscrepancy))}</p>
               </CardContent>
             </Card>
-
-            {/* Flagged Items Card */}
             <Card className="bg-card border-border">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground mb-1">Flagged Items</p>
-                <p className="text-2xl font-bold text-destructive">{stats.flagged}</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Require attention
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center justify-between text-sm text-muted-foreground">
+                  {t('status')}
+                  {isCompleted && <CheckCircle size={16} className="text-accent" />}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="flex items-center gap-2 text-2xl font-bold text-foreground">
+                  <Clock size={20} className="text-primary" />
+                  {displayStatus}
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle>Category Comparison</CardTitle>
-                <CardDescription>Expected vs Counted quantities</CardDescription>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">{t('salesImpact')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={categoryData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="category" stroke="var(--muted-foreground)" fontSize={12} />
-                    <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'var(--card)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Bar dataKey="expected" fill="var(--muted-foreground)" name="Expected" />
-                    <Bar dataKey="counted" fill="var(--primary)" name="Counted" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <p className="text-2xl font-bold text-accent">{formatCurrency(salesImpact)}</p>
+                <p className="text-xs text-muted-foreground mt-1">{soldUnits} units</p>
               </CardContent>
             </Card>
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">{t('discrepancy')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-destructive">{formatCurrency(discrepancyImpact)}</p>
+                <p className="text-xs text-muted-foreground mt-1">{audit.flaggedItems} items</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">{t('previousStock')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(previousValue)}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">{t('currentStock')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(countedValue)}</p>
+              </CardContent>
+            </Card>
+          </div>
 
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>Status Distribution</CardTitle>
-                <CardDescription>Items by audit status</CardDescription>
+                <CardTitle className="flex items-center justify-between">
+                  {t('analytics')}
+                  {isCompleted && <CheckCircle size={18} className="text-accent" />}
+                </CardTitle>
+                <CardDescription>{t('result')}</CardDescription>
               </CardHeader>
-              <CardContent className="flex items-center justify-center">
-                <ResponsiveContainer width="100%" height={250}>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
-                    <Pie
-                      data={statusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
+                    <Pie data={resultData} dataKey="value" innerRadius={60} outerRadius={90} paddingAngle={2}>
+                      {resultData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'var(--card)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px'
-                      }}
-                    />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '8px' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
+
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  {t('financialResults')}
+                  {isCompleted && <CheckCircle size={18} className="text-accent" />}
+                </CardTitle>
+                <CardDescription>{t('salesImpact')} / {t('discrepancy')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={categoryData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="category" stroke="var(--muted-foreground)" />
+                    <YAxis stroke="var(--muted-foreground)" />
+                    <Tooltip contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '8px' }} />
+                    <Bar dataKey="sold" fill="var(--accent)" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="discrepancy" fill="var(--destructive)" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Audit Items Table */}
           <Card className="bg-card border-border">
             <CardHeader>
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div>
-                  <CardTitle>Audit Items</CardTitle>
-                  <CardDescription>Record actual quantities for each item</CardDescription>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-2.5 text-muted-foreground" size={16} />
-                    <input
-                      type="text"
-                      placeholder="Search items..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 pr-4 py-2 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent text-sm w-48"
-                    />
-                  </div>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value as any)}
-                    className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
-                  >
-                    <option value="all" className="bg-secondary">All Status</option>
-                    <option value="pending" className="bg-secondary">Pending</option>
-                    <option value="counted" className="bg-secondary">Counted</option>
-                    <option value="flagged" className="bg-secondary">Flagged</option>
-                  </select>
-                </div>
-              </div>
+              <CardTitle>{audit.inventoryName}</CardTitle>
+              <CardDescription>{t('previousStock')} → {t('currentStock')}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 text-muted-foreground" size={18} />
+                <input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search items..."
+                  className="w-full pl-10 pr-4 py-2 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="min-w-[900px] w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Item</th>
-                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Category</th>
-                      <th className="text-center py-3 px-4 font-semibold text-muted-foreground">Expected (Stock)</th>
-                      <th className="text-center py-3 px-4 font-semibold text-muted-foreground">Expected (Available)</th>
-                      <th className="text-center py-3 px-4 font-semibold text-muted-foreground">Counted (Stock)</th>
-                      <th className="text-center py-3 px-4 font-semibold text-muted-foreground">Counted (Available)</th>
-                      <th className="text-center py-3 px-4 font-semibold text-muted-foreground">Discrepancy</th>
-                      <th className="text-center py-3 px-4 font-semibold text-muted-foreground">Status</th>
-                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Actions</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('itemName')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('previousStock')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('currentStock')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('difference')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('salesImpact')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('result')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map((item) => (
-                      <tr key={item.itemId} className={`border-b border-border transition-colors ${
-                        item.status === 'flagged' ? 'bg-destructive/5' : 'hover:bg-secondary/20'
-                      }`}>
-                        <td className="py-3 px-4">
-                          <p className="font-medium text-foreground">{item.itemName}</p>
-                          <p className="text-xs text-muted-foreground">${item.unitPrice.toFixed(2)} / {item.unit}</p>
-                        </td>
-                        <td className="py-3 px-4 text-muted-foreground">{item.category}</td>
-                        <td className="py-3 px-4 text-center text-foreground font-medium">
-                          {item.expectedQuantity} {item.unit}
-                        </td>
-                        <td className="py-3 px-4 text-center text-muted-foreground">
-                          {item.availableQuantity} {item.unit}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {editingItem === item.itemId ? (
+                    {items.map((item) => {
+                      const draft = draftValues[item.itemId] ?? item.currentStock?.toString() ?? ''
+                      const difference = item.difference
+                      const isSaved = item.result !== 'pending'
+                      const isRowEditing = Boolean(editingRows[item.itemId])
+                      const isSaving = Boolean(savingRows[item.itemId])
+                      const resultClass =
+                        item.result === 'sold'
+                          ? 'text-accent'
+                          : item.result === 'discrepancy'
+                            ? 'text-destructive'
+                            : 'text-muted-foreground'
+
+                      return (
+                        <tr key={item.itemId} className="border-b border-border hover:bg-secondary/20 transition-colors">
+                          <td className="py-3 px-4">
+                            <p className="font-medium text-foreground">{item.itemName}</p>
+                            <p className="text-xs text-muted-foreground">{item.category}</p>
+                          </td>
+                          <td className="py-3 px-4 text-foreground">{item.previousStock} {item.unit}</td>
+                          <td className="py-3 px-4">
                             <input
                               type="number"
-                              value={tempValues.countedQuantity}
-                              onChange={(e) => setTempValues(prev => ({ ...prev, countedQuantity: e.target.value }))}
-                              className="w-20 px-2 py-1 bg-background border border-accent rounded text-center text-foreground focus:outline-none"
-                              autoFocus
+                              step="0.01"
+                              value={draft}
+                              onFocus={() => {
+                                if (!isCompleted && !isSaved) {
+                                  setEditingRows((prev) => ({ ...prev, [item.itemId]: true }))
+                                }
+                              }}
+                              onChange={(event) => setDraftValues((prev) => ({ ...prev, [item.itemId]: event.target.value }))}
+                              disabled={isCompleted || (isSaved && !isRowEditing)}
+                              className="w-28 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-foreground focus:outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70"
                             />
-                          ) : (
-                            <span className={item.countedQuantity !== null ? 'text-foreground font-medium' : 'text-muted-foreground'}>
-                              {item.countedQuantity !== null ? `${item.countedQuantity} ${item.unit}` : '-'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {editingItem === item.itemId ? (
-                            <input
-                              type="number"
-                              value={tempValues.countedAvailable}
-                              onChange={(e) => setTempValues(prev => ({ ...prev, countedAvailable: e.target.value }))}
-                              className="w-20 px-2 py-1 bg-background border border-border rounded text-center text-foreground focus:outline-none"
-                            />
-                          ) : (
-                            <span className={item.countedAvailable !== null ? 'text-muted-foreground' : 'text-muted-foreground'}>
-                              {item.countedAvailable !== null ? `${item.countedAvailable} ${item.unit}` : '-'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {item.discrepancy !== null ? (
-                            <span className={`font-medium ${
-                              item.discrepancy < 0 ? 'text-destructive' : 
-                              item.discrepancy > 0 ? 'text-accent' : 'text-foreground'
-                            }`}>
-                              {item.discrepancy > 0 ? '+' : ''}{item.discrepancy}
-                              <span className="text-xs text-muted-foreground ml-1">
-                                (${item.discrepancyValue?.toFixed(2)})
-                              </span>
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {getStatusIcon(item.status)}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-1">
-                            {editingItem === item.itemId ? (
-                              <>
+                          </td>
+                          <td className={`py-3 px-4 font-semibold ${difference === null ? 'text-muted-foreground' : difference >= 0 ? 'text-accent' : 'text-destructive'}`}>
+                            {difference === null ? '-' : `${difference > 0 ? '+' : ''}${difference} ${item.unit}`}
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-accent">
+                            {formatCurrency(Math.max(difference ?? 0, 0) * item.unitPrice)}
+                          </td>
+                          <td className={`py-3 px-4 font-semibold ${resultClass}`}>
+                            {item.result === 'sold' ? t('sold') : item.result === 'discrepancy' ? t('discrepancy') : item.result === 'matched' ? t('matched') : t('pending')}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-1">
+                              {isCompleted ? (
+                                <span className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-accent">
+                                  <CheckCircle size={15} />
+                                  {t('completed')}
+                                </span>
+                              ) : isSaved && !isRowEditing ? (
                                 <Button
-                                  variant="ghost"
                                   size="sm"
-                                  onClick={() => handleSaveItem(item.itemId)}
-                                  className="text-accent hover:text-accent hover:bg-accent/10"
-                                >
-                                  <Check size={16} />
-                                </Button>
-                                <Button
                                   variant="ghost"
-                                  size="sm"
-                                  onClick={handleCancelEdit}
-                                  className="text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                  className="gap-2 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                  onClick={() => {
+                                    setDraftValues((prev) => ({ ...prev, [item.itemId]: item.currentStock?.toString() ?? item.previousStock.toString() }))
+                                    setEditingRows((prev) => ({ ...prev, [item.itemId]: true }))
+                                  }}
                                 >
-                                  <XIcon size={16} />
+                                  <Edit2 size={16} />
+                                  {t('edit')}
                                 </Button>
-                              </>
-                            ) : (
-                              <>
-                                {audit.status !== 'completed' && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleStartEdit(item)}
-                                    className="text-muted-foreground hover:text-primary hover:bg-primary/10"
-                                    title="Count Item"
-                                  >
-                                    <Save size={16} />
-                                  </Button>
-                                )}
-                                {item.status !== 'pending' && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleFlagItem(item.itemId)}
-                                    className={`${item.status === 'flagged' ? 'text-destructive' : 'text-muted-foreground'} hover:text-destructive hover:bg-destructive/10`}
-                                    title={item.status === 'flagged' ? 'Unflag Item' : 'Flag Item'}
-                                  >
-                                    <Flag size={16} />
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </td>
+                              ) : (
+                                <Button size="sm" variant="ghost" className="gap-2 text-muted-foreground hover:text-accent hover:bg-accent/10" onClick={() => handleSaveItem(item.itemId)} disabled={isSaving}>
+                                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                  {isSaving ? t('saving') : t('save')}
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {!isCompleted && (
+                <div className="flex justify-end border-t border-border pt-4">
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 bg-transparent sm:w-auto"
+                    onClick={handleSaveAll}
+                    disabled={!auditItems.some((item) => {
+                      const rawValue = draftValues[item.itemId]
+                      if (rawValue === undefined || rawValue === '') return false
+                      const currentStock = Number.parseFloat(rawValue)
+                      return Number.isFinite(currentStock) && currentStock !== item.currentStock
+                    })}
+                  >
+                    <Save size={16} />
+                    {t('saveAll')}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 gap-6">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle>{t('comments')}</CardTitle>
+                    <CardDescription>{audit.id}</CardDescription>
+                  </div>
+                  {!isAddingComment && (
+                    <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setIsAddingComment(true)}>
+                      <MessageSquare size={16} />
+                      {t('addComment')}
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isAddingComment && (
+                  <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                    <textarea
+                      value={commentText}
+                      onChange={(event) => setCommentText(event.target.value)}
+                      rows={4}
+                      placeholder={t('writeComment')}
+                      className="w-full resize-none rounded-lg border border-border bg-background/60 px-3 py-2 text-foreground focus:outline-none focus:border-accent"
+                    />
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                      <Button variant="outline" className="bg-transparent" onClick={() => {
+                        setCommentText('')
+                        setIsAddingComment(false)
+                      }}>
+                        {t('cancel')}
+                      </Button>
+                      <Button onClick={handleAddComment} disabled={isSavingComment || !commentText.trim()} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                        {isSavingComment ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                        {isSavingComment ? t('saving') : t('saveComment')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {comments.length > 0 ? comments.map((comment) => (
+                  <div key={comment.id} className="rounded-lg border border-border bg-secondary/20 p-4">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="font-medium text-foreground">{comment.author}</p>
+                      <p className="text-xs text-muted-foreground">{comment.date}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{comment.content}</p>
+                  </div>
+                )) : (
+                  <p className="py-6 text-center text-sm text-muted-foreground">{t('noComments')}</p>
+                )}
+                {audit.notes && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                    <p className="mb-2 text-xs font-semibold uppercase text-primary">{t('initialComment')}</p>
+                    <p className="text-sm text-muted-foreground">{audit.notes}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+      {showCompletionModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg border border-border bg-card">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card p-6">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">{t('auditResults')}</h2>
+                <p className="text-sm text-muted-foreground">{audit.id} · {audit.inventoryName}</p>
+              </div>
+              <button onClick={() => setShowCompletionModal(false)} className="text-muted-foreground hover:text-foreground">
+                <X size={22} />
+              </button>
+            </div>
+
+            <div className="space-y-6 p-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('items')}</p>
+                  <p className="mt-1 text-2xl font-bold text-foreground">{countedItems}/{totalInventoryItems}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('sold')}</p>
+                  <p className="mt-1 text-2xl font-bold text-accent">{soldUnits}</p>
+                  <p className="text-xs text-muted-foreground">{formatCurrency(salesImpact)}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('discrepancy')}</p>
+                  <p className="mt-1 text-2xl font-bold text-destructive">{audit.flaggedItems}</p>
+                  <p className="text-xs text-muted-foreground">{formatCurrency(discrepancyImpact)}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('netMovement')}</p>
+                  <p className="mt-1 text-2xl font-bold text-foreground">{formatCurrency(salesImpact - discrepancyImpact)}</p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="min-w-[820px] w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-secondary/20">
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('itemName')}</th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('previousStock')}</th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('currentStock')}</th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('difference')}</th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('salesImpact')}</th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('discrepancy')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditRows.map((row) => (
+                      <tr key={row.item} className="border-b border-border">
+                        <td className="px-4 py-3 text-foreground">{row.item}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.previousStock} {row.unit}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.currentStock} {row.unit}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.difference} {row.unit}</td>
+                        <td className="px-4 py-3 font-medium text-accent">{formatCurrency(row.salesImpact)}</td>
+                        <td className="px-4 py-3 font-medium text-destructive">{formatCurrency(row.discrepancyImpact)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              {filteredItems.length === 0 && (
-                <div className="py-8 text-center text-muted-foreground">
-                  No items match your search criteria.
+              <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:justify-between">
+                <div className="flex gap-2">
+                  <Button variant="outline" className="gap-2 bg-transparent" onClick={() => handleExport('csv')} disabled={Boolean(isExporting)}>
+                    {isExporting === 'csv' ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    {isExporting === 'csv' ? t('exporting') : 'CSV'}
+                  </Button>
+                  <Button variant="outline" className="gap-2 bg-transparent" onClick={() => handleExport('pdf')} disabled={Boolean(isExporting)}>
+                    {isExporting === 'pdf' ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                    {isExporting === 'pdf' ? t('exporting') : 'PDF'}
+                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Comments Section */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <MessageSquare size={20} className="text-primary" />
-                  <div>
-                    <CardTitle>Audit Comments</CardTitle>
-                    <CardDescription>{audit.comments.length} comment{audit.comments.length !== 1 ? 's' : ''}</CardDescription>
-                  </div>
-                </div>
-                {audit.status !== 'completed' && (
+                {!isCompleted && (
                   <Button
-                    onClick={() => setShowAddComment(!showAddComment)}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={() => {
+                      completeAudit(audit.id)
+                      setShowCompletionModal(false)
+                    }}
                   >
-                    <Plus size={16} />
-                    Add Comment
+                    {t('completed')}
                   </Button>
                 )}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Add Comment Form */}
-              {showAddComment && (
-                <div className="p-4 bg-secondary/20 border border-border rounded-lg space-y-3">
-                  <div className="flex gap-2">
-                    <select
-                      value={commentType}
-                      onChange={(e) => setCommentType(e.target.value as 'general' | 'discrepancy' | 'issue')}
-                      className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
-                    >
-                      <option value="general" className="bg-secondary">General</option>
-                      <option value="discrepancy" className="bg-secondary">Discrepancy</option>
-                      <option value="issue" className="bg-secondary">Issue</option>
-                    </select>
-                  </div>
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Write your observation, issue, or explanation..."
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent resize-none"
-                    rows={3}
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setShowAddComment(false)
-                        setNewComment('')
-                        setCommentType('general')
-                      }}
-                      className="bg-transparent"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim()}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-                    >
-                      <Send size={16} />
-                      Submit
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Comments List */}
-              {audit.comments.length > 0 ? (
-                <div className="space-y-3">
-                  {audit.comments.map((comment) => (
-                    <div
-                      key={comment.id}
-                      className={`p-4 rounded-lg border ${
-                        comment.type === 'discrepancy' ? 'bg-primary/5 border-primary/30' :
-                        comment.type === 'issue' ? 'bg-destructive/5 border-destructive/30' :
-                        'bg-secondary/20 border-border'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                          <User size={16} className="text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-foreground">{comment.author}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              comment.type === 'discrepancy' ? 'bg-primary/20 text-primary' :
-                              comment.type === 'issue' ? 'bg-destructive/20 text-destructive' :
-                              'bg-muted/30 text-muted-foreground'
-                            }`}>
-                              {comment.type.charAt(0).toUpperCase() + comment.type.slice(1)}
-                            </span>
-                            <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
-                          </div>
-                          <p className="text-muted-foreground mt-1">{comment.content}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
-                  <p>No comments yet. Add a comment to document observations or issues.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Notes Section */}
-          {audit.notes && (
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle>Audit Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">{audit.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-        </main>
-      </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

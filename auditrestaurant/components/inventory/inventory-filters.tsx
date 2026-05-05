@@ -11,6 +11,7 @@ interface InventoryFiltersProps {
   onCategoryChange: (value: string) => void
   onStatusChange: (value: string) => void
   onTypeChange: (value: string) => void
+  showTypeFilter?: boolean
 }
 
 export default function InventoryFilters({
@@ -23,6 +24,7 @@ export default function InventoryFilters({
   onCategoryChange,
   onStatusChange,
   onTypeChange,
+  showTypeFilter = true,
 }: InventoryFiltersProps) {
   const categories = [
     "all",
@@ -60,20 +62,22 @@ export default function InventoryFilters({
           <span className="text-sm text-muted-foreground">Filters:</span>
         </div>
 
-        <select
-          value={selectedType}
-          onChange={(e) => onTypeChange(e.target.value)}
-          className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer"
-        >
-          <option value="all" className="bg-secondary">
-            All Types
-          </option>
-          {inventoryTypes.map((type) => (
-            <option key={type.id} value={type.name} className="bg-secondary">
-              {type.name}
+        {showTypeFilter && (
+          <select
+            value={selectedType}
+            onChange={(e) => onTypeChange(e.target.value)}
+            className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer"
+          >
+            <option value="all" className="bg-secondary">
+              All Types
             </option>
-          ))}
-        </select>
+            {inventoryTypes.map((type) => (
+              <option key={type.id} value={type.name} className="bg-secondary">
+                {type.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* Category Filter */}
         <select

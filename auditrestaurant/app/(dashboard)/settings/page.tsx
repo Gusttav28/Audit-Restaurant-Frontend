@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
-import { Save, Lock, Bell, Users, Palette, CreditCard, Check, ArrowUpRight, AlertCircle } from 'lucide-react'
+import { Save, Lock, Bell, Users, Palette, CreditCard, Check, ArrowUpRight, AlertCircle, Loader2, Plus, X } from 'lucide-react'
+import { useAppContext } from '@/components/app-context'
 
 const planDetails: Record<string, { name: string; price: number; features: string[] }> = {
   basic: {
@@ -34,19 +35,38 @@ interface Subscription {
   nextBillingDate?: string
 }
 
+interface TeamMember {
+  name: string
+  email: string
+  role: 'Admin' | 'Auditor' | 'Collaborator'
+}
+
 export default function SettingsPage() {
+  const { selectedRestaurant, updateSelectedRestaurant, createRestaurant, t, formatCurrency } = useAppContext()
   const [activeTab, setActiveTab] = useState('general')
   const [subscription, setSubscription] = useState<Subscription | null>(null)
-  const [settings, setSettings] = useState({
-    restaurantName: 'Downtown Bistro',
-    email: 'admin@downtownbistro.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Main Street',
-    auditNotifications: true,
-    inventoryAlerts: true,
-    weeklyReports: true,
-    lowStockThreshold: 5,
+  const [isSavingSettings, setIsSavingSettings] = useState(false)
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false)
+  const [isSavingTeamMember, setIsSavingTeamMember] = useState(false)
+  const [teamMembersByRestaurant, setTeamMembersByRestaurant] = useState<Record<number, TeamMember[]>>({
+    [selectedRestaurant.id]: [
+      { name: 'John Smith', email: 'john@restaurant.com', role: 'Admin' },
+      { name: 'Sarah Johnson', email: 'sarah@restaurant.com', role: 'Auditor' },
+      { name: 'Michael Chen', email: 'michael@restaurant.com', role: 'Auditor' },
+    ],
   })
+  const [newTeamMember, setNewTeamMember] = useState<TeamMember>({ name: '', email: '', role: 'Auditor' })
+  const [settings, setSettings] = useState({
+    restaurantName: selectedRestaurant.name,
+    email: selectedRestaurant.email,
+    phone: selectedRestaurant.phone,
+    address: selectedRestaurant.address,
+    auditNotifications: selectedRestaurant.settings.auditNotifications,
+    inventoryAlerts: selectedRestaurant.settings.inventoryAlerts,
+    weeklyReports: selectedRestaurant.settings.weeklyReports,
+    lowStockThreshold: selectedRestaurant.settings.lowStockThreshold,
+  })
+  const [newRestaurant, setNewRestaurant] = useState({ name: '', location: '', email: '', phone: '', address: '' })
 
   useEffect(() => {
     const userData = localStorage.getItem("auditflow_user")
@@ -58,7 +78,21 @@ export default function SettingsPage() {
     }
   }, [])
 
+  useEffect(() => {
+    setSettings({
+      restaurantName: selectedRestaurant.name,
+      email: selectedRestaurant.email,
+      phone: selectedRestaurant.phone,
+      address: selectedRestaurant.address,
+      auditNotifications: selectedRestaurant.settings.auditNotifications,
+      inventoryAlerts: selectedRestaurant.settings.inventoryAlerts,
+      weeklyReports: selectedRestaurant.settings.weeklyReports,
+      lowStockThreshold: selectedRestaurant.settings.lowStockThreshold,
+    })
+  }, [selectedRestaurant])
+
   const currentPlan = subscription?.plan ? planDetails[subscription.plan] : null
+  const teamMembers = teamMembersByRestaurant[selectedRestaurant.id] ?? []
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement
@@ -69,20 +103,59 @@ export default function SettingsPage() {
   }
 
   const handleSave = () => {
-    console.log('Settings saved:', settings)
-    alert('Settings saved successfully!')
+    setIsSavingSettings(true)
+    updateSelectedRestaurant((restaurant) => ({
+      ...restaurant,
+      name: settings.restaurantName,
+      email: settings.email,
+      phone: settings.phone,
+      address: settings.address,
+      settings: {
+        auditNotifications: settings.auditNotifications,
+        inventoryAlerts: settings.inventoryAlerts,
+        weeklyReports: settings.weeklyReports,
+        lowStockThreshold: Number(settings.lowStockThreshold),
+      },
+    }))
+    window.setTimeout(() => setIsSavingSettings(false), 350)
+  }
+
+  const handleCreateRestaurant = () => {
+    if (!newRestaurant.name.trim() || !newRestaurant.location.trim()) return
+    createRestaurant(newRestaurant)
+    setNewRestaurant({ name: '', location: '', email: '', phone: '', address: '' })
+  }
+
+  const handleAddTeamMember = () => {
+    if (!newTeamMember.name.trim() || !newTeamMember.email.trim()) return
+    setIsSavingTeamMember(true)
+    window.setTimeout(() => {
+      setTeamMembersByRestaurant((currentMembers) => ({
+        ...currentMembers,
+        [selectedRestaurant.id]: [...(currentMembers[selectedRestaurant.id] ?? []), newTeamMember],
+      }))
+      setNewTeamMember({ name: '', email: '', role: 'Auditor' })
+      setIsSavingTeamMember(false)
+      setIsTeamModalOpen(false)
+    }, 350)
+  }
+
+  const roleLabel = (role: TeamMember['role']) => {
+    if (role === 'Admin') return t('admin')
+    if (role === 'Collaborator') return t('collaborator')
+    return t('auditorRole')
   }
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <Header />
         <main className="p-6 space-y-6">
           {/* Page Header */}
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-            <p className="text-muted-foreground mt-1">Manage your account and preferences</p>
+            <h1 className="text-3xl font-bold text-foreground">{t('settings')}</h1>
+            <p className="text-muted-foreground mt-1">{t('settingsSubtitle')} · {selectedRestaurant.name}</p>
           </div>
 
           {/* Tabs */}
@@ -113,17 +186,18 @@ export default function SettingsPage() {
           </div>
 
           {/* Tab Content */}
-          <div className="max-w-2xl space-y-6">
+          <div className="max-w-none space-y-6">
             {activeTab === 'general' && (
               <>
+                <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
                 <Card className="bg-card border-border">
                   <CardHeader>
-                    <CardTitle>Restaurant Information</CardTitle>
-                    <CardDescription>Update your restaurant details</CardDescription>
+                    <CardTitle>{t('restaurantInfo')}</CardTitle>
+                    <CardDescription>{t('updateRestaurantDetails')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Restaurant Name</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">{t('restaurantName')}</label>
                       <input
                         type="text"
                         name="restaurantName"
@@ -133,7 +207,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">{t('email')}</label>
                       <input
                         type="email"
                         name="email"
@@ -143,7 +217,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">{t('phone')}</label>
                       <input
                         type="tel"
                         name="phone"
@@ -153,7 +227,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Address</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">{t('address')}</label>
                       <input
                         type="text"
                         name="address"
@@ -167,12 +241,45 @@ export default function SettingsPage() {
 
                 <Card className="bg-card border-border">
                   <CardHeader>
-                    <CardTitle>Inventory Preferences</CardTitle>
+                    <CardTitle>{t('createRestaurantTitle')}</CardTitle>
+                    <CardDescription>{t('createRestaurant')}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-4 sm:grid-cols-2">
+                    {[
+                      ['name', t('restaurantName'), true],
+                      ['location', t('location'), true],
+                      ['email', t('email'), false],
+                      ['phone', t('phone'), false],
+                      ['address', t('address'), false],
+                    ].map(([key, label, required]) => (
+                      <div key={key as string} className={key === 'address' ? 'sm:col-span-2' : ''}>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          {label}{required ? ' *' : ''}
+                        </label>
+                        <input
+                          value={newRestaurant[key as keyof typeof newRestaurant]}
+                          onChange={(event) => setNewRestaurant((prev) => ({ ...prev, [key as string]: event.target.value }))}
+                          className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent"
+                        />
+                      </div>
+                    ))}
+                    <div className="sm:col-span-2">
+                      <Button onClick={handleCreateRestaurant} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                        {t('createRestaurant')}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                </div>
+
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle>{t('inventoryPreferences')}</CardTitle>
                     <CardDescription>Configure inventory management settings</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Low Stock Threshold</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">{t('lowStockThreshold')}</label>
                       <select
                         name="lowStockThreshold"
                         value={settings.lowStockThreshold}
@@ -215,7 +322,7 @@ export default function SettingsPage() {
                             <div>
                               <h3 className="text-xl font-semibold text-foreground">{currentPlan.name}</h3>
                               <p className="text-muted-foreground">
-                                ${currentPlan.price}<span className="text-sm">/month</span>
+                                {formatCurrency(currentPlan.price)}<span className="text-sm">/month</span>
                               </p>
                             </div>
                             <Link href="/subscription">
@@ -425,25 +532,22 @@ export default function SettingsPage() {
             {activeTab === 'team' && (
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle>Team Management</CardTitle>
-                  <CardDescription>Manage team members and permissions</CardDescription>
+                  <CardTitle>{t('teamManagement')}</CardTitle>
+                  <CardDescription>{t('teamDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                    + Add Team Member
+                  <Button className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsTeamModalOpen(true)}>
+                    <Plus size={16} />
+                    {t('addTeamMember')}
                   </Button>
                   <div className="space-y-3">
-                    {[
-                      { name: 'John Smith', email: 'john@restaurant.com', role: 'Admin' },
-                      { name: 'Sarah Johnson', email: 'sarah@restaurant.com', role: 'Auditor' },
-                      { name: 'Michael Chen', email: 'michael@restaurant.com', role: 'Auditor' },
-                    ].map((member, i) => (
+                    {teamMembers.map((member, i) => (
                       <div key={i} className="p-3 bg-secondary/20 rounded-lg border border-border flex justify-between items-center">
                         <div>
                           <p className="font-medium text-foreground">{member.name}</p>
                           <p className="text-xs text-muted-foreground">{member.email}</p>
                         </div>
-                        <span className="text-xs font-medium px-2 py-1 bg-accent/20 text-accent rounded">{member.role}</span>
+                        <span className="text-xs font-medium px-2 py-1 bg-accent/20 text-accent rounded">{roleLabel(member.role)}</span>
                       </div>
                     ))}
                   </div>
@@ -453,15 +557,67 @@ export default function SettingsPage() {
 
             {/* Save Button */}
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline">Cancel</Button>
-              <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-                <Save size={18} />
-                Save Changes
+              <Button variant="outline">{t('cancel')}</Button>
+              <Button onClick={handleSave} disabled={isSavingSettings} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+                {isSavingSettings ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {isSavingSettings ? t('saving') : t('saveChanges')}
               </Button>
             </div>
           </div>
         </main>
       </div>
+      {isTeamModalOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-lg border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border p-6">
+              <h2 className="text-lg font-bold text-foreground">{t('addTeamMember')}</h2>
+              <button onClick={() => setIsTeamModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X size={22} />
+              </button>
+            </div>
+            <div className="space-y-4 p-6">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-foreground">{t('memberName')}</label>
+                <input
+                  value={newTeamMember.name}
+                  onChange={(event) => setNewTeamMember((member) => ({ ...member, name: event.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-foreground">{t('email')}</label>
+                <input
+                  type="email"
+                  value={newTeamMember.email}
+                  onChange={(event) => setNewTeamMember((member) => ({ ...member, email: event.target.value }))}
+                  className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-foreground">{t('role')}</label>
+                <select
+                  value={newTeamMember.role}
+                  onChange={(event) => setNewTeamMember((member) => ({ ...member, role: event.target.value as TeamMember['role'] }))}
+                  className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-foreground focus:outline-none focus:border-accent"
+                >
+                  <option value="Auditor">{t('auditorRole')}</option>
+                  <option value="Admin">{t('admin')}</option>
+                  <option value="Collaborator">{t('collaborator')}</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 border-t border-border p-6">
+              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setIsTeamModalOpen(false)}>
+                {t('cancel')}
+              </Button>
+              <Button className="flex-1 gap-2 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddTeamMember} disabled={isSavingTeamMember || !newTeamMember.name.trim() || !newTeamMember.email.trim()}>
+                {isSavingTeamMember ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {isSavingTeamMember ? t('saving') : t('save')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

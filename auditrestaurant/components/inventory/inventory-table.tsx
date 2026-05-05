@@ -1,6 +1,7 @@
 "use client"
 import { Edit2, Trash2, AlertCircle, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAppContext } from "@/components/app-context"
 
 interface InventoryItem {
   id: number
@@ -25,6 +26,7 @@ interface InventoryTableProps {
 }
 
 export default function InventoryTable({ items, onUpdateItem, onDeleteItem, onEditItem }: InventoryTableProps) {
+  const { formatCurrency } = useAppContext()
   const getStatusColor = (status: string) => {
     switch (status) {
       case "good":
@@ -44,7 +46,7 @@ export default function InventoryTable({ items, onUpdateItem, onDeleteItem, onEd
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="min-w-[920px] w-full text-sm">
         <thead>
           <tr className="border-b border-border">
             <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Item Name</th>
@@ -92,7 +94,7 @@ export default function InventoryTable({ items, onUpdateItem, onDeleteItem, onEd
                     <span className="text-muted-foreground">-</span>
                   )}
                 </td>
-                <td className="py-3 px-4 text-foreground font-medium">${item.price.toFixed(2)}</td>
+                <td className="py-3 px-4 text-foreground font-medium">{formatCurrency(item.price)}</td>
                 <td className="py-3 px-4 flex gap-2">
                   <Button
                     variant="ghost"
