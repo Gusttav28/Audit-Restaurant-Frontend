@@ -1,28 +1,29 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import { AppProvider } from '@/components/app-context'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Audit Flow - Inventory & Audit Management',
+  title: 'Audit Coflow - Inventory & Audit Management',
   description: 'Professional restaurant audit and inventory management system',
   generator: 'v0.app',
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
+        url: '/audit-coflow-logo-light.jpg',
+      },
+      {
+        url: '/audit-coflow-logo-light.jpg',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/icon-dark-32x32.png',
+        url: '/audit-coflow-logo-dark.jpg',
         media: '(prefers-color-scheme: dark)',
       },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
     ],
-    apple: '/apple-icon.png',
+    shortcut: '/audit-coflow-logo-light.jpg',
+    apple: '/audit-coflow-logo-light.jpg',
   },
 }
 
@@ -32,9 +33,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
-        <AppProvider>{children}</AppProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="auditflow-theme">
+          <AppProvider>{children}</AppProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

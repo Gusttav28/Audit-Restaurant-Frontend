@@ -166,10 +166,10 @@ export default function AuditsTable({ audits, onUpdateAudit, onDeleteAudit }: Au
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-muted-foreground hover:text-accent hover:bg-accent/10"
+                        className="group/audit-eye text-muted-foreground hover:!bg-primary/10 hover:!text-black"
                         title="View Audit"
                       >
-                        <Eye size={16} />
+                        <Eye size={16} className="text-muted-foreground transition-colors group-hover/audit-eye:!text-black" />
                       </Button>
                     </Link>
                     <Button

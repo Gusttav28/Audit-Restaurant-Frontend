@@ -10,6 +10,7 @@ import CreateAuditModal from '@/components/audits/create-audit-modal'
 import { Plus, Search, ClipboardList, CheckCircle, Clock, AlertCircle, Trash2, X } from 'lucide-react'
 import { useAppContext } from '@/components/app-context'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 // Shared types for the audit system
 export interface InventoryItem {
@@ -206,7 +207,8 @@ const initialAudits: Audit[] = [
 ]
 
 export default function AuditsPage() {
-  const { selectedRestaurant, t, createAudit, deleteAudit, setSelectedInventoryId } = useAppContext()
+  const { selectedRestaurant, t, createAudit, deleteAudit, setSelectedInventoryId, clearRequestLoading, can } = useAppContext()
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [selectedInventory, setSelectedInventory] = useState('all')
@@ -289,9 +291,15 @@ export default function AuditsPage() {
     })
   }, [searchTerm, selectedStatus, selectedInventory, audits])
 
-  const handleCreateAudit = (newAuditData: { inventoryId: number; auditor: string; notes: string; auditDate: string }) => {
-    createAudit(newAuditData)
+  const handleCreateAudit = async (newAuditData: { inventoryId: number; auditor: string; auditorId?: string; notes: string; auditDate: string; helperName?: string; temporaryHelperName?: string }) => {
+    const auditId = await createAudit(newAuditData, { keepLoading: true })
     setIsCreateModalOpen(false)
+    if (auditId) {
+      window.sessionStorage.setItem('auditflow-created-audit-id', auditId)
+      router.push(`/audits/${auditId}`)
+    } else {
+      clearRequestLoading()
+    }
   }
 
   const handleUpdateAudit = (id: string, updatedData: Partial<Audit>) => {
@@ -333,6 +341,7 @@ export default function AuditsPage() {
             </div>
             <Button 
               onClick={() => setIsCreateModalOpen(true)}
+              disabled={!can("audit")}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2 sm:w-auto"
             >
               <Plus size={20} />

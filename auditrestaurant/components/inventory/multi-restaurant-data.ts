@@ -1,5 +1,6 @@
 export interface CustomUnit {
   id: number
+  remoteId?: string
   name: string
   abbreviation: string
   baseUnit: string
@@ -9,6 +10,7 @@ export interface CustomUnit {
 
 export interface InventoryItem {
   id: number
+  remoteId?: string
   restaurantId: number
   typeId: number
   name: string
@@ -19,13 +21,26 @@ export interface InventoryItem {
   minStock: number
   status: string
   price: number
+  priceCurrency?: "USD" | "CRC"
+  phase?: "none" | "production" | "merma"
+  mermaQuantity?: number
+  productionQuantity?: number
   lastUpdated: string
   supplier: string
   daysUntilExpiry: number | null
+  stockHistory?: InventoryStockHistory[]
+}
+
+export interface InventoryStockHistory {
+  auditId: string
+  completedDate: string
+  previousStock: number
+  newStock: number
 }
 
 export interface InventoryType {
   id: number
+  remoteId?: string
   name: string
   color: string
   active: boolean
@@ -34,8 +49,12 @@ export interface InventoryType {
 
 export interface RestaurantInventory {
   id: number
+  remoteId?: string
   name: string
   location: string
+  country?: string
+  defaultCurrency?: "USD" | "CRC"
+  exchangeRateToUsd?: number
   email: string
   phone: string
   address: string
@@ -47,15 +66,47 @@ export interface RestaurantInventory {
   }
   inventoryTypes: InventoryType[]
   customUnits: CustomUnit[]
+  itemCategories?: string[] | Record<number, string[]>
+  suppliers?: string[]
+  inventoryLastEdited?: string
+  currentUserRole?: "owner" | "admin" | "auditor" | "collaborator"
+  currentUserPermissions?: AppPermissions
+  teamMembers?: TeamMember[]
   audits: RestaurantAudit[]
+}
+
+export interface AppPermissions {
+  read: boolean
+  audit: boolean
+  create: boolean
+  edit: boolean
+  delete: boolean
+}
+
+export interface TeamMember {
+  id?: string
+  userId?: string
+  restaurantIds?: string[]
+  name: string
+  email: string
+  role: "Admin" | "Auditor" | "Collaborator"
+  permissions: AppPermissions
 }
 
 export interface RestaurantAudit {
   id: string
+  remoteId?: string
   inventoryId: number
   inventoryName: string
   inventoryColor: string
   auditor: string
+  auditorId?: string
+  assignedByAdminId?: string
+  assignedByAdminName?: string
+  assignedDate?: string
+  helperName?: string
+  temporaryHelperName?: string
+  dueDate?: string
   createdDate: string
   startedDate: string | null
   completedDate: string | null
@@ -72,6 +123,7 @@ export interface RestaurantAudit {
 
 export interface RestaurantAuditComment {
   id: number
+  remoteId?: string
   author: string
   date: string
   content: string
@@ -79,12 +131,17 @@ export interface RestaurantAuditComment {
 
 export interface RestaurantAuditItem {
   itemId: number
+  remoteId?: string
+  inventoryItemRemoteId?: string
   itemName: string
   category: string
   previousStock: number
   currentStock: number | null
   unit: string
   unitPrice: number
+  phase?: "none" | "production" | "merma"
+  mermaQuantity?: number
+  productionQuantity?: number
   difference: number | null
   result: "pending" | "sold" | "discrepancy" | "matched"
   notes: string

@@ -1,4 +1,5 @@
 "use client"
+import type { ReactNode } from "react"
 import { Search, Filter } from "lucide-react"
 
 interface InventoryFiltersProps {
@@ -12,6 +13,8 @@ interface InventoryFiltersProps {
   onStatusChange: (value: string) => void
   onTypeChange: (value: string) => void
   showTypeFilter?: boolean
+  categories?: string[]
+  extraControls?: ReactNode
 }
 
 export default function InventoryFilters({
@@ -25,20 +28,10 @@ export default function InventoryFilters({
   onStatusChange,
   onTypeChange,
   showTypeFilter = true,
+  categories = [],
+  extraControls,
 }: InventoryFiltersProps) {
-  const categories = [
-    "all",
-    "Oils & Vinegars",
-    "Herbs & Spices",
-    "Grains & Pasta",
-    "Dairy",
-    "Produce",
-    "Meat",
-    "Spirits",
-    "Mixers",
-    "Garnishes",
-    "Wine",
-  ]
+  const categoryOptions = ["all", ...categories]
   const statuses = ["all", "good", "low", "critical"]
 
   return (
@@ -85,7 +78,7 @@ export default function InventoryFilters({
           onChange={(e) => onCategoryChange(e.target.value)}
           className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer"
         >
-          {categories.map((cat) => (
+          {categoryOptions.map((cat) => (
             <option key={cat} value={cat} className="bg-secondary">
               {cat === "all" ? "All Categories" : cat}
             </option>
@@ -111,6 +104,8 @@ export default function InventoryFilters({
             Critical
           </option>
         </select>
+
+        {extraControls}
       </div>
     </div>
   )

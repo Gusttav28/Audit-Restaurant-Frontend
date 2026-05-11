@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Package, CalendarDays } from 'lucide-react'
+import { X, Package, CalendarDays, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppContext } from '@/components/app-context'
 
@@ -23,17 +23,27 @@ interface InventoryType {
 interface CreateAuditModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreate: (audit: { inventoryId: number; auditor: string; notes: string; auditDate: string }) => void
+  onCreate: (audit: { inventoryId: number; auditor: string; auditorId?: string; notes: string; auditDate: string; helperName?: string; temporaryHelperName?: string }) => void
   inventoryTypes: InventoryType[]
 }
 
-const auditors = ['John Smith', 'Sarah Johnson', 'Michael Chen', 'Emma Wilson', 'David Brown']
-
 export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryTypes }: CreateAuditModalProps) {
-  const { selectedInventoryId, t } = useAppContext()
+  const { selectedInventoryId, selectedRestaurant, currentUserName, currentUserEmail, isAdmin, t } = useAppContext()
+  const teamMembers = selectedRestaurant.teamMembers ?? []
+  const currentMember = teamMembers.find((member) => member.email.toLowerCase() === currentUserEmail.toLowerCase())
+  const assignableMembers = Array.from(
+    new Map(
+      teamMembers
+        .filter((member) => member.email.toLowerCase() !== currentUserEmail.toLowerCase())
+        .map((member) => [member.userId ?? member.email, member]),
+    ).values(),
+  )
   const [formData, setFormData] = useState({
     inventoryId: selectedInventoryId || inventoryTypes[0]?.id || 0,
-    auditor: '',
+    auditor: currentUserName,
+    auditorId: currentMember?.userId ?? '',
+    helperName: '',
+    temporaryHelperName: '',
     notes: '',
     auditDate: new Date().toISOString().split('T')[0],
   })
@@ -43,14 +53,25 @@ export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryT
     setFormData((prev) => ({
       ...prev,
       inventoryId: selectedInventoryId || inventoryTypes[0]?.id || 0,
+      auditor: prev.auditor || currentUserName,
+      auditorId: prev.auditorId || currentMember?.userId || '',
       auditDate: new Date().toISOString().split('T')[0],
     }))
-  }, [isOpen, selectedInventoryId, inventoryTypes])
+  }, [isOpen, selectedInventoryId, inventoryTypes, currentUserName, currentMember?.userId])
 
   const selectedInventory = inventoryTypes.find(inv => inv.id === formData.inventoryId)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
+    if (name === 'auditor') {
+      const selectedMember = assignableMembers.find((member) => member.name === value)
+      setFormData(prev => ({
+        ...prev,
+        auditor: value,
+        auditorId: selectedMember?.userId ?? (value === currentUserName ? currentMember?.userId ?? '' : ''),
+      }))
+      return
+    }
     setFormData(prev => ({
       ...prev,
       [name]: name === 'inventoryId' ? parseInt(value) : value,
@@ -62,7 +83,10 @@ export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryT
     onCreate(formData)
     setFormData({
       inventoryId: selectedInventoryId || inventoryTypes[0]?.id || 0,
-      auditor: '',
+      auditor: currentUserName,
+      auditorId: currentMember?.userId ?? '',
+      helperName: '',
+      temporaryHelperName: '',
       notes: '',
       auditDate: new Date().toISOString().split('T')[0],
     })
@@ -71,8 +95,8 @@ export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryT
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="auditflow-thin-scrollbar bg-card border border-border rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(event) => event.stopPropagation()}>
         <div className="flex justify-between items-center p-6 border-b border-border sticky top-0 bg-card z-10">
           <h2 className="text-lg font-bold text-foreground">{t('createNewAudit')}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -115,7 +139,7 @@ export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryT
           {selectedInventory && (
             <div className="p-4 bg-secondary/30 border border-border rounded-lg">
               <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">{t('items')}</p>
-              <div className="max-h-32 overflow-y-auto space-y-1">
+              <div className="auditflow-thin-scrollbar max-h-32 overflow-y-auto space-y-1">
                 {selectedInventory.items.map(item => (
                   <div key={item.id} className="flex justify-between text-sm py-1">
                     <span className="text-foreground">{item.name}</span>
@@ -130,8 +154,10 @@ export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryT
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">{t('auditor')} *</label>
               <select name="auditor" value={formData.auditor} onChange={handleChange} className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent cursor-pointer" required>
-                <option value="" className="bg-secondary">Select...</option>
-                {auditors.map(a => <option key={a} value={a} className="bg-secondary">{a}</option>)}
+                <option value={currentUserName} className="bg-secondary">{currentUserName}</option>
+                {isAdmin && assignableMembers.map(member => (
+                  <option key={member.userId ?? member.email} value={member.name} className="bg-secondary">{member.name}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -142,6 +168,35 @@ export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryT
               </div>
             </div>
           </div>
+
+          {isAdmin && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <UserPlus size={16} className="text-primary" />
+                  {t('helper')}
+                </label>
+                <select
+                  name="helperName"
+                  value={formData.helperName}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-foreground focus:outline-none focus:border-accent"
+                >
+                  <option value="" className="bg-secondary">-</option>
+                  {assignableMembers.map(member => <option key={member.userId ?? member.email} value={member.name} className="bg-secondary">{member.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-foreground">{t('temporaryCollaborator')}</label>
+                <input
+                  name="temporaryHelperName"
+                  value={formData.temporaryHelperName}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-foreground focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">{t('notes')}</label>

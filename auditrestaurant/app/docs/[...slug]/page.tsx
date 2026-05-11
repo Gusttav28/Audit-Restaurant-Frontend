@@ -5,6 +5,7 @@ import React from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { 
   ClipboardCheck, ChevronRight, ArrowLeft, Book, Package, 
   FileText, BarChart3, Users, CreditCard, Check, AlertCircle,
@@ -13,20 +14,20 @@ import {
 
 const docsContent: Record<string, { title: string; category: string; content: React.ReactNode }> = {
   "getting-started/introduction": {
-    title: "Introduction to AuditFlow",
+    title: "Introduction to Audit Coflow",
     category: "Getting Started",
     content: (
       <div className="prose-content">
         <p className="lead">
-          AuditFlow is a comprehensive inventory audit management system designed for restaurants, 
+          Audit Coflow is a comprehensive inventory audit management system designed for restaurants, 
           warehouses, and any business that needs to track stock accurately.
         </p>
         
-        <h2>What is AuditFlow?</h2>
+        <h2>What is Audit Coflow?</h2>
         <p>
-          AuditFlow helps you manage multiple inventories, perform accurate stock counts, detect 
+          Audit Coflow helps you manage multiple inventories, perform accurate stock counts, detect 
           discrepancies, and maintain complete audit history. Whether you're managing a single 
-          location or multiple sites, AuditFlow provides the tools you need for precise inventory control.
+          location or multiple sites, Audit Coflow provides the tools you need for precise inventory control.
         </p>
         
         <h2>Key Concepts</h2>
@@ -39,7 +40,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
         
         <h2>Getting Started</h2>
         <p>
-          To begin using AuditFlow, you'll need to create an account and set up your first inventory. 
+          To begin using Audit Coflow, you'll need to create an account and set up your first inventory. 
           Follow our Quick Start Guide to get up and running in minutes.
         </p>
       </div>
@@ -51,7 +52,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          Get up and running with AuditFlow in just a few minutes. This guide walks you through 
+          Get up and running with Audit Coflow in just a few minutes. This guide walks you through 
           the essential steps to start managing your inventory.
         </p>
         
@@ -112,13 +113,13 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          Inventories are the foundation of AuditFlow. Learn how to create and organize 
+          Inventories are the foundation of Audit Coflow. Learn how to create and organize 
           different inventory types for your business.
         </p>
         
         <h2>What is an Inventory?</h2>
         <p>
-          An inventory in AuditFlow represents a logical grouping of items, typically based on 
+          An inventory in Audit Coflow represents a logical grouping of items, typically based on 
           location or category. For example, a restaurant might have separate inventories for:
         </p>
         <ul>
@@ -240,7 +241,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          Audits are the core feature of AuditFlow. Learn how to create and start an audit 
+          Audits are the core feature of Audit Coflow. Learn how to create and start an audit 
           for any of your inventories.
         </p>
         
@@ -444,7 +445,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          AuditFlow uses role-based access control to manage what team members can see and do.
+          Audit Coflow uses role-based access control to manage what team members can see and do.
         </p>
         
         <h2>Available Roles</h2>
@@ -504,7 +505,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          AuditFlow offers three subscription tiers to match your business needs.
+          Audit Coflow offers three subscription tiers to match your business needs.
         </p>
         
         <h2>Plan Comparison</h2>
@@ -582,10 +583,7 @@ export default function DocPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <Link href="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <ClipboardCheck size={18} className="text-primary-foreground" />
-                </div>
-                <span className="text-lg font-semibold text-foreground">AuditFlow</span>
+                <AuditFlowLogo imageClassName="h-8 w-8 rounded-lg" textClassName="text-foreground" />
               </Link>
             </div>
           </div>
@@ -613,10 +611,7 @@ export default function DocPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <ClipboardCheck size={18} className="text-primary-foreground" />
-              </div>
-              <span className="text-lg font-semibold text-foreground">AuditFlow</span>
+              <AuditFlowLogo imageClassName="h-8 w-8 rounded-lg" textClassName="text-foreground" />
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -668,7 +663,7 @@ export default function DocPage() {
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-border">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <span>2024 AuditFlow</span>
+          <span>2024 Audit Coflow</span>
           <div className="flex gap-6">
             <Link href="/" className="hover:text-foreground">Home</Link>
             <Link href="/docs" className="hover:text-foreground">Documentation</Link>

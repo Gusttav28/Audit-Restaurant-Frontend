@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { 
   History, ArrowRight, ArrowLeft, Check, Calendar, FileText,
   Download, Eye, TrendingUp, ClipboardCheck
@@ -57,10 +58,7 @@ export default function HistoryFeaturePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <ClipboardCheck size={18} className="text-primary-foreground" />
-              </div>
-              <span className="text-lg font-semibold text-foreground">AuditFlow</span>
+              <AuditFlowLogo imageClassName="h-8 w-8 rounded-lg" textClassName="text-foreground" />
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -104,7 +102,7 @@ export default function HistoryFeaturePage() {
           <h2 className="text-2xl font-semibold text-foreground mb-4">Overview</h2>
           <p className="text-lg text-muted-foreground leading-relaxed mb-6">
             Audit History provides a permanent record of all completed audits. When an audit is marked complete, 
-            AuditFlow saves a snapshot of every item's counted values, discrepancies, comments, and flags. This 
+            Audit Coflow saves a snapshot of every item's counted values, discrepancies, comments, and flags. This 
             creates an immutable record that can be referenced for compliance, analysis, or dispute resolution.
           </p>
           <p className="text-lg text-muted-foreground leading-relaxed">
@@ -246,7 +244,7 @@ export default function HistoryFeaturePage() {
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-border">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <span>2024 AuditFlow</span>
+          <span>2024 Audit Coflow</span>
           <div className="flex gap-6">
             <Link href="/features/inventory" className="hover:text-foreground">Inventory Management</Link>
             <Link href="/features/audits" className="hover:text-foreground">Real-Time Audits</Link>

@@ -25,8 +25,15 @@ export default function InventoryPage() {
     deleteInventoryType,
     addCustomUnit,
     deleteCustomUnit,
+    addItemCategory,
+    renameItemCategory,
+    deleteItemCategory,
+    addSupplier,
+    deleteSupplier,
+    language,
     formatCurrency,
     t,
+    can,
   } = useAppContext()
   const [selectedTypeId, setSelectedTypeId] = useState(selectedRestaurant.inventoryTypes[0]?.id ?? 0)
   const [focusedView, setFocusedView] = useState<"inventory" | "all" | "low" | "expiring">("inventory")
@@ -37,16 +44,34 @@ export default function InventoryPage() {
   const [isTypesModalOpen, setIsTypesModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
-  const [registeredSuppliersByRestaurant, setRegisteredSuppliersByRestaurant] = useState<Record<number, string[]>>({})
+  const [selectedAuditPreviewId, setSelectedAuditPreviewId] = useState("")
 
   const activeTypes = selectedRestaurant?.inventoryTypes.filter((type) => type.active) ?? []
   const selectedType = activeTypes.find((type) => type.id === selectedTypeId) ?? activeTypes[0]
   const allRestaurantItems = activeTypes.flatMap((type) => type.items)
   const registeredSuppliers = useMemo(() => {
     const fromItems = allRestaurantItems.map((item) => item.supplier).filter(Boolean)
-    const fromRegistry = registeredSuppliersByRestaurant[selectedRestaurant.id] ?? []
+    const fromRegistry = selectedRestaurant.suppliers ?? []
     return Array.from(new Set([...fromItems, ...fromRegistry])).sort((a, b) => a.localeCompare(b))
-  }, [allRestaurantItems, registeredSuppliersByRestaurant, selectedRestaurant.id])
+  }, [allRestaurantItems, selectedRestaurant.suppliers])
+  const itemCategories = useMemo(() => {
+    const typeItems = selectedType?.items ?? []
+    const fromItems = typeItems.map((item) => item.category).filter(Boolean)
+    const scopedCategories = Array.isArray(selectedRestaurant.itemCategories)
+      ? selectedRestaurant.itemCategories
+      : selectedRestaurant.itemCategories?.[selectedType?.id ?? 0] ?? []
+    const fromRegistry = scopedCategories
+    return Array.from(new Set([...fromRegistry, ...fromItems])).sort((a, b) => a.localeCompare(b))
+  }, [selectedRestaurant.itemCategories, selectedType])
+  const completedInventoryAudits = selectedType
+    ? selectedRestaurant.audits.filter((audit) => audit.inventoryId === selectedType.id && audit.status === "completed")
+    : []
+  const selectedAuditPreview = completedInventoryAudits.find((audit) => audit.id === selectedAuditPreviewId)
+  const formattedLastEdited = selectedRestaurant.inventoryLastEdited
+    ? new Intl.DateTimeFormat(language === "es" ? "es-CR" : "en-US", { dateStyle: "medium", timeStyle: "short" }).format(
+        new Date(selectedRestaurant.inventoryLastEdited),
+      )
+    : null
 
   useEffect(() => {
     const view = new URLSearchParams(window.location.search).get("view")
@@ -60,12 +85,17 @@ export default function InventoryPage() {
     setSearchTerm("")
     setSelectedCategory("all")
     setSelectedStatus("all")
+    setSelectedAuditPreviewId("")
   }, [selectedRestaurant.id])
 
   useEffect(() => {
     if (selectedType || activeTypes.length === 0) return
     setSelectedTypeId(activeTypes[0].id)
   }, [activeTypes, selectedType])
+
+  useEffect(() => {
+    setSelectedAuditPreviewId("")
+  }, [selectedTypeId])
 
   const filteredItems = useMemo(() => {
     const sourceItems = focusedView === "inventory" ? selectedType?.items ?? [] : allRestaurantItems
@@ -83,6 +113,40 @@ export default function InventoryPage() {
       return matchesSearch && matchesCategory && matchesStatus && matchesFocus
     })
   }, [searchTerm, selectedCategory, selectedStatus, selectedType, focusedView, allRestaurantItems])
+  const auditPreviewItems = useMemo(() => {
+    if (!selectedAuditPreview || !selectedType) return []
+    return (selectedAuditPreview.items ?? []).map((auditItem) => {
+      const liveItem = selectedType.items.find((item) => item.id === auditItem.itemId)
+      return {
+        id: auditItem.itemId,
+        restaurantId: selectedRestaurant.id,
+        typeId: selectedAuditPreview.inventoryId,
+        name: auditItem.itemName,
+        type: selectedAuditPreview.inventoryName,
+        category: auditItem.category,
+        quantity: auditItem.currentStock ?? auditItem.previousStock,
+        unit: auditItem.unit,
+        minStock: liveItem?.minStock ?? 0,
+        status: auditItem.result === "discrepancy" ? "critical" : auditItem.result === "sold" ? "low" : "good",
+        price: auditItem.unitPrice,
+        priceCurrency: liveItem?.priceCurrency,
+        phase: liveItem?.phase,
+        lastUpdated: selectedAuditPreview.completedDate ?? selectedAuditPreview.createdDate,
+        supplier: liveItem?.supplier ?? "",
+        daysUntilExpiry: null,
+        stockHistory: liveItem?.stockHistory,
+        auditPreviousStock: auditItem.previousStock,
+        auditCurrentStock: auditItem.currentStock,
+        auditDifference: auditItem.difference,
+        auditResult: auditItem.result,
+      } satisfies InventoryItem & {
+        auditPreviousStock: number
+        auditCurrentStock: number | null
+        auditDifference: number | null
+        auditResult: typeof auditItem.result
+      }
+    })
+  }, [selectedAuditPreview, selectedRestaurant.id, selectedType])
 
   const typeStats = activeTypes.map((type) => ({
     ...type,
@@ -105,8 +169,8 @@ export default function InventoryPage() {
     setEditingItem(null)
   }
 
-  const handleDeleteItem = (id: number) => {
-    deleteInventoryItem(id)
+  const handleDeleteItem = async (id: number) => {
+    return deleteInventoryItem(id)
   }
 
   const handleDeleteType = (id: number) => {
@@ -116,12 +180,7 @@ export default function InventoryPage() {
   }
 
   const handleRegisterSupplier = (supplier: string) => {
-    const trimmedSupplier = supplier.trim()
-    if (!trimmedSupplier) return
-    setRegisteredSuppliersByRestaurant((current) => ({
-      ...current,
-      [selectedRestaurant.id]: Array.from(new Set([...(current[selectedRestaurant.id] ?? []), trimmedSupplier])),
-    }))
+    addSupplier(supplier)
   }
 
   return (
@@ -148,7 +207,7 @@ export default function InventoryPage() {
               </Button>
               <Button
                 onClick={() => setIsAddModalOpen(true)}
-                disabled={!selectedType}
+                disabled={!selectedType || Boolean(selectedAuditPreview) || !can("create")}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
               >
                 <Plus size={20} />
@@ -278,6 +337,11 @@ export default function InventoryPage() {
                 <span className="w-fit rounded-full bg-secondary/50 px-3 py-1 text-xs font-medium text-muted-foreground">
                   {filteredItems.length} items
                 </span>
+                {formattedLastEdited && (
+                  <span className="w-fit rounded-full bg-secondary/30 px-3 py-1 text-xs font-medium text-muted-foreground">
+                    {t("lastEdited")}: {formattedLastEdited}
+                  </span>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -294,16 +358,51 @@ export default function InventoryPage() {
                     onStatusChange={setSelectedStatus}
                     onTypeChange={() => undefined}
                     showTypeFilter={false}
+                    categories={itemCategories}
+                    extraControls={
+                      <select
+                        value={selectedAuditPreviewId}
+                        onChange={(event) => setSelectedAuditPreviewId(event.target.value)}
+                        disabled={focusedView !== "inventory" || completedInventoryAudits.length === 0 || Boolean(selectedAuditPreview)}
+                        className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <option value="" className="bg-secondary">
+                          {completedInventoryAudits.length ? t("auditHistory") : t("noAuditHistory")}
+                        </option>
+                        {completedInventoryAudits.map((audit) => (
+                          <option key={audit.id} value={audit.id} className="bg-secondary">
+                            {audit.id} - {audit.inventoryName} - {audit.completedDate ?? audit.createdDate} - {audit.status}
+                          </option>
+                        ))}
+                      </select>
+                    }
                   />
+                  {selectedAuditPreview && (
+                    <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-muted-foreground">
+                      {t("previewingAudit")}: <span className="font-mono font-semibold text-foreground">{selectedAuditPreview.id}</span> · {selectedAuditPreview.inventoryName} · {selectedAuditPreview.completedDate}
+                    </div>
+                  )}
                   <InventoryTable
-                    items={filteredItems}
-                    onUpdateItem={() => undefined}
-                    onDeleteItem={handleDeleteItem}
+                    items={selectedAuditPreview ? auditPreviewItems : filteredItems}
+        onUpdateItem={updateInventoryItem}
+        onDeleteItem={handleDeleteItem}
                     onEditItem={(item) => {
                       setEditingItem(item as InventoryItem)
                       setIsEditModalOpen(true)
                     }}
+                    readOnly={Boolean(selectedAuditPreview)}
                   />
+                  {selectedAuditPreview && (
+                    <div className="flex justify-center border-t border-border pt-5">
+                      <Button
+                        type="button"
+                        className="w-full max-w-xs bg-primary text-white hover:bg-primary/90 sm:w-auto"
+                        onClick={() => setSelectedAuditPreviewId("")}
+                      >
+                        {t("done")}
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border py-12 text-center">
@@ -329,6 +428,9 @@ export default function InventoryPage() {
         }}
         onSave={handleSaveEdit}
         inventoryTypes={activeTypes}
+        suppliers={registeredSuppliers}
+        onRegisterSupplier={handleRegisterSupplier}
+        onDeleteSupplier={deleteSupplier}
       />
 
       <AddItemModal
@@ -336,12 +438,17 @@ export default function InventoryPage() {
         onClose={() => setIsAddModalOpen(false)}
         onAdd={handleAddItem}
         inventoryTypes={activeTypes}
+        categories={itemCategories}
+        onAddCategory={(category) => selectedType && addItemCategory(selectedType.id, category)}
+        onRenameCategory={(oldCategory, nextCategory) => selectedType && renameItemCategory(selectedType.id, oldCategory, nextCategory)}
+        onDeleteCategory={(category) => selectedType && deleteItemCategory(selectedType.id, category)}
         customUnits={selectedRestaurant?.customUnits ?? []}
         onAddUnit={addCustomUnit}
         onDeleteUnit={deleteCustomUnit}
         selectedTypeName={selectedType?.name}
         suppliers={registeredSuppliers}
         onRegisterSupplier={handleRegisterSupplier}
+        onDeleteSupplier={deleteSupplier}
       />
 
       <ManageTypesModal

@@ -1,18 +1,21 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowLeft, CheckCircle, Clock, Download, Edit2, FileText, Loader2, MessageSquare, Save, Search, TriangleAlert, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
+import AuditFlowLogo from '@/components/layout/audit-flow-logo'
 import { useAppContext } from '@/components/app-context'
 
 export default function AuditDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params)
-  const { selectedRestaurant, updateAuditItem, completeAudit, reopenAudit, addAuditComment, formatCurrency, t } = useAppContext()
+  const router = useRouter()
+  const { selectedRestaurant, updateAuditItem, completeAudit, reopenAudit, addAuditComment, formatCurrency, clearRequestLoading, can, t } = useAppContext()
   const audit = selectedRestaurant.audits.find((candidate) => candidate.id === id)
   const [searchTerm, setSearchTerm] = useState('')
   const [draftValues, setDraftValues] = useState<Record<number, string>>({})
@@ -22,7 +25,16 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
   const [isAddingComment, setIsAddingComment] = useState(false)
   const [isSavingComment, setIsSavingComment] = useState(false)
   const [isExporting, setIsExporting] = useState<null | 'csv' | 'pdf'>(null)
+  const [isCompletingAudit, setIsCompletingAudit] = useState(false)
+  const [completionMessage, setCompletionMessage] = useState(false)
   const [commentText, setCommentText] = useState('')
+
+  useEffect(() => {
+    const pendingAuditId = window.sessionStorage.getItem('auditflow-created-audit-id')
+    if (pendingAuditId !== id) return
+    window.sessionStorage.removeItem('auditflow-created-audit-id')
+    clearRequestLoading()
+  }, [clearRequestLoading, id])
 
   const auditItems = useMemo(() => {
     if (!audit) return []
@@ -38,6 +50,9 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
             currentStock: null,
             unit: item.unit,
             unitPrice: item.price,
+            phase: item.phase,
+            mermaQuantity: item.mermaQuantity,
+            productionQuantity: item.productionQuantity,
             difference: null,
             result: 'pending' as const,
             notes: '',
@@ -97,10 +112,11 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
     return acc
   }, {}))
   const comments = audit.comments ?? []
+  const canAudit = can('audit')
 
   const handleSaveItem = (itemId: number) => {
     const item = items.find((candidate) => candidate.itemId === itemId)
-    if (!item) return
+    if (!item || !canAudit || isCompleted) return
     const rawValue = draftValues[itemId] ?? item.currentStock?.toString() ?? ''
     const currentStock = Number.parseFloat(rawValue)
     if (!Number.isFinite(currentStock)) return
@@ -112,7 +128,16 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
     }, 250)
   }
 
+  const handleCurrentStockKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, itemId: number) => {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    if (!isCompleted && canAudit) {
+      handleSaveItem(itemId)
+    }
+  }
+
   const handleSaveAll = () => {
+    if (!canAudit || isCompleted) return
     const changedItems = auditItems.filter((item) => {
       const rawValue = draftValues[item.itemId]
       if (rawValue === undefined || rawValue === '') return false
@@ -167,9 +192,33 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
     }, 300)
   }
 
+  const handleCompleteAudit = () => {
+    setShowCompletionModal(false)
+    setIsCompletingAudit(true)
+    completeAudit(audit.id)
+    window.setTimeout(() => setCompletionMessage(true), 700)
+    window.setTimeout(() => router.push('/audits'), 1200)
+  }
+
+  const getPhaseLabel = (phase?: 'none' | 'production' | 'merma') => {
+    if (phase === 'production') return t('productionStock')
+    if (phase === 'merma') return t('mermaStock')
+    if (phase === 'none') return t('noProductionStock')
+    return '-'
+  }
+
+  const getAuditPhaseDisplay = (item: typeof auditItems[number]) => {
+    if (item.phase === 'merma') return `${item.mermaQuantity ?? 0} ${item.unit} ${t('mermaStock')}`
+    if (item.phase === 'production') return `${item.productionQuantity ?? 0} ${item.unit} ${t('productionStock')}`
+    return getPhaseLabel(item.phase)
+  }
+
   const auditRows = auditItems.map((item) => ({
     item: item.itemName,
     category: item.category,
+    phase: getAuditPhaseDisplay(item),
+    mermaQuantity: item.mermaQuantity ?? 0,
+    productionQuantity: item.productionQuantity ?? 0,
     previousStock: item.previousStock,
     currentStock: item.currentStock ?? '',
     unit: item.unit,
@@ -191,11 +240,20 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
     URL.revokeObjectURL(url)
   }
 
+  const exportBaseName = () => {
+    const normalize = (value: string) => value.trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")
+    const date = audit.completedDate ?? audit.createdDate
+    return `AuditCoflow_Restaurant-${normalize(selectedRestaurant.name)}_Inventory-${normalize(audit.inventoryName)}_${normalize(audit.id)}_${date}`
+  }
+
   const exportCsv = () => {
-    const headers = ['Item', 'Category', 'Previous Stock', 'Current Stock', 'Unit', 'Difference', 'Result', 'Unit Price', 'Sales Impact', 'Discrepancy Impact']
+    const headers = ['Item', 'Category', 'Phase', 'Merma Quantity', 'Production Quantity', 'Previous Stock', 'Current Stock', 'Unit', 'Difference', 'Result', 'Unit Price', 'Sales Impact', 'Discrepancy Impact']
     const rows = auditRows.map((row) => [
       row.item,
       row.category,
+      row.phase,
+      row.mermaQuantity,
+      row.productionQuantity,
       row.previousStock,
       row.currentStock,
       row.unit,
@@ -208,7 +266,7 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
     const csv = [headers, ...rows]
       .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','))
       .join('\n')
-    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `${audit.id}.csv`)
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `${exportBaseName()}.csv`)
   }
 
   const exportPdf = () => {
@@ -221,7 +279,7 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
       `Discrepancy value: ${formatCurrency(discrepancyImpact)}`,
       '',
       ...auditRows.map((row) =>
-        `${row.item} | previous ${row.previousStock} ${row.unit} | current ${row.currentStock} ${row.unit} | difference ${row.difference} | ${row.result} | sold ${formatCurrency(row.salesImpact)} | discrepancy ${formatCurrency(row.discrepancyImpact)}`,
+        `${row.item} | ${row.phase} | merma ${row.mermaQuantity} | production ${row.productionQuantity} | previous ${row.previousStock} ${row.unit} | current ${row.currentStock} ${row.unit} | difference ${row.difference} | ${row.result} | sold ${formatCurrency(row.salesImpact)} | discrepancy ${formatCurrency(row.discrepancyImpact)}`,
       ),
     ]
     const escaped = lines.join('\n').replace(/[()\\]/g, '\\$&')
@@ -245,7 +303,7 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
       pdf += `${String(offset).padStart(10, '0')} 00000 n \n`
     })
     pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`
-    downloadBlob(new Blob([pdf], { type: 'application/pdf' }), `${audit.id}.pdf`)
+    downloadBlob(new Blob([pdf], { type: 'application/pdf' }), `${exportBaseName()}.pdf`)
   }
 
   return (
@@ -275,7 +333,7 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
                   }
                   setShowCompletionModal(true)
                 }}
-                disabled={!isCompleted && !canComplete}
+                disabled={!isCompleted && (!canComplete || !canAudit)}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
               >
                 {isCompleted ? <Edit2 size={18} /> : <CheckCircle size={18} />}
@@ -427,11 +485,14 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
                   className="w-full pl-10 pr-4 py-2 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
                 />
               </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-[900px] w-full text-sm">
+              <div className="auditflow-thin-scrollbar overflow-x-auto">
+                <table className="min-w-[1100px] w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('itemName')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('itemPhase')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('mermaQuantity')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('productionQuantity')}</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('previousStock')}</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('currentStock')}</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground">{t('difference')}</th>
@@ -460,6 +521,9 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
                             <p className="font-medium text-foreground">{item.itemName}</p>
                             <p className="text-xs text-muted-foreground">{item.category}</p>
                           </td>
+                          <td className="py-3 px-4 text-muted-foreground">{getAuditPhaseDisplay(item)}</td>
+                          <td className="py-3 px-4 text-muted-foreground">{item.phase === 'merma' ? `${item.mermaQuantity ?? 0} ${item.unit}` : '-'}</td>
+                          <td className="py-3 px-4 text-muted-foreground">{item.phase === 'production' ? `${item.productionQuantity ?? 0} ${item.unit}` : '-'}</td>
                           <td className="py-3 px-4 text-foreground">{item.previousStock} {item.unit}</td>
                           <td className="py-3 px-4">
                             <input
@@ -467,13 +531,16 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
                               step="0.01"
                               value={draft}
                               onFocus={() => {
-                                if (!isCompleted && !isSaved) {
+                                if (!isCompleted && !isSaved && canAudit) {
                                   setEditingRows((prev) => ({ ...prev, [item.itemId]: true }))
                                 }
                               }}
-                              onChange={(event) => setDraftValues((prev) => ({ ...prev, [item.itemId]: event.target.value }))}
-                              disabled={isCompleted || (isSaved && !isRowEditing)}
-                              className="w-28 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-foreground focus:outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70"
+                              onChange={(event) => {
+                                if (canAudit) setDraftValues((prev) => ({ ...prev, [item.itemId]: event.target.value }))
+                              }}
+                              onKeyDown={(event) => handleCurrentStockKeyDown(event, item.itemId)}
+                              disabled={!canAudit || isCompleted || (isSaved && !isRowEditing)}
+                              className="w-32 rounded-lg border-2 border-primary/40 bg-background px-3 py-2 font-semibold text-foreground shadow-sm shadow-primary/10 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:border-border disabled:bg-secondary/30 disabled:opacity-70"
                             />
                           </td>
                           <td className={`py-3 px-4 font-semibold ${difference === null ? 'text-muted-foreground' : difference >= 0 ? 'text-accent' : 'text-destructive'}`}>
@@ -491,6 +558,10 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
                                 <span className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-accent">
                                   <CheckCircle size={15} />
                                   {t('completed')}
+                                </span>
+                              ) : !canAudit ? (
+                                <span className="inline-flex items-center rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground">
+                                  {t('read')}
                                 </span>
                               ) : isSaved && !isRowEditing ? (
                                 <Button
@@ -519,7 +590,7 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
                   </tbody>
                 </table>
               </div>
-              {!isCompleted && (
+              {!isCompleted && canAudit && (
                 <div className="flex justify-end border-t border-border pt-4">
                   <Button
                     variant="outline"
@@ -603,8 +674,8 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
         </main>
       </div>
       {showCompletionModal && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg border border-border bg-card">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowCompletionModal(false)}>
+          <div className="auditflow-thin-scrollbar w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg border border-border bg-card" onClick={(event) => event.stopPropagation()}>
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card p-6">
               <div>
                 <h2 className="text-xl font-bold text-foreground">{t('auditResults')}</h2>
@@ -637,11 +708,14 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-lg border border-border">
-                <table className="min-w-[820px] w-full text-sm">
+              <div className="auditflow-thin-scrollbar overflow-x-auto rounded-lg border border-border">
+                <table className="min-w-[1040px] w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-secondary/20">
                       <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('itemName')}</th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('itemPhase')}</th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('mermaQuantity')}</th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('productionQuantity')}</th>
                       <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('previousStock')}</th>
                       <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('currentStock')}</th>
                       <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t('difference')}</th>
@@ -653,6 +727,9 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
                     {auditRows.map((row) => (
                       <tr key={row.item} className="border-b border-border">
                         <td className="px-4 py-3 text-foreground">{row.item}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.phase}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.mermaQuantity ? `${row.mermaQuantity} ${row.unit}` : '-'}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.productionQuantity ? `${row.productionQuantity} ${row.unit}` : '-'}</td>
                         <td className="px-4 py-3 text-muted-foreground">{row.previousStock} {row.unit}</td>
                         <td className="px-4 py-3 text-muted-foreground">{row.currentStock} {row.unit}</td>
                         <td className="px-4 py-3 text-muted-foreground">{row.difference} {row.unit}</td>
@@ -678,16 +755,24 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
                 {!isCompleted && (
                   <Button
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={() => {
-                      completeAudit(audit.id)
-                      setShowCompletionModal(false)
-                    }}
+                    onClick={handleCompleteAudit}
                   >
                     {t('completed')}
                   </Button>
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {isCompletingAudit && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-background">
+          <div className="text-center">
+            <AuditFlowLogo collapsed className="mx-auto mb-4 animate-pulse justify-center" imageClassName="h-16 w-16 rounded-2xl" />
+            <p className="text-sm uppercase tracking-widest text-muted-foreground">
+              {completionMessage ? t('completed') : t('completingAudit')}
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-foreground">{audit.inventoryName}</h2>
           </div>
         </div>
       )}

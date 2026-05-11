@@ -6,7 +6,9 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { ClipboardCheck, Eye, EyeOff, Loader2, Check } from "lucide-react"
+import { clearSupabaseBrowserState, createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -44,19 +46,48 @@ export default function SignupPage() {
     setIsLoading(true)
     setError("")
 
-    // Simulate account creation
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
     if (formData.name && formData.email && formData.password) {
-      // Store auth state
-      localStorage.setItem("auditflow_user", JSON.stringify({
+      await createSupabaseBrowserClient().auth.signOut({ scope: "global" })
+      clearSupabaseBrowserState()
+      const response = await fetch("/api/signup-workspace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+      const workspaceResult = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        setError(workspaceResult?.error ?? "Unable to create your workspace. Please try again.")
+        setIsLoading(false)
+        return
+      }
+
+      const supabase = createSupabaseBrowserClient()
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
-        name: formData.name,
-        company: formData.company,
-        subscription: null,
-        createdAt: new Date().toISOString()
-      }))
-      router.push("/subscription")
+        password: formData.password,
+      })
+
+      if (signInError) {
+        setError("Account created. Please confirm your email if required, then sign in.")
+        setIsLoading(false)
+        return
+      }
+
+      if (data.user) {
+        localStorage.setItem("auditflow_user", JSON.stringify({
+          email: data.user.email ?? formData.email,
+          name: formData.name,
+          company: formData.company,
+          subscription: null,
+          createdAt: new Date().toISOString()
+        }))
+        sessionStorage.setItem("auditflow-auth-transition", "login")
+        window.location.assign("/dashboard")
+      } else {
+        setError("Account created. Please sign in to continue.")
+        setIsLoading(false)
+      }
     } else {
       setError("Please fill in all required fields")
       setIsLoading(false)
@@ -76,7 +107,7 @@ export default function SignupPage() {
           </h2>
           <p className="text-muted-foreground leading-relaxed mb-8">
             Create unlimited inventories, perform precise audits, and gain insights 
-            into your stock flow. AuditFlow helps teams stay organized and accountable.
+            into your stock flow. Audit Coflow helps teams stay organized and accountable.
           </p>
           
           <div className="space-y-4">
@@ -102,10 +133,7 @@ export default function SignupPage() {
         <div className="w-full max-w-sm mx-auto">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 mb-12">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <ClipboardCheck size={22} className="text-primary-foreground" />
-            </div>
-            <span className="text-xl font-semibold text-foreground">AuditFlow</span>
+            <AuditFlowLogo imageClassName="h-10 w-10 rounded-lg" textClassName="text-foreground" />
           </Link>
 
           {/* Header */}

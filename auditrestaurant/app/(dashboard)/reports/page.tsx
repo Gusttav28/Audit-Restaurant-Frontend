@@ -6,21 +6,93 @@ import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ScatterChart, Scatter } from 'recharts'
 import { Button } from '@/components/ui/button'
-import { Download, FileText, Filter, Loader2, X } from 'lucide-react'
+import { Download, FileText, Filter, HelpCircle, Loader2, X } from 'lucide-react'
 import { useAppContext } from '@/components/app-context'
+
+type ReportSection = 'trend' | 'category' | 'compliance' | 'severity' | 'duration' | 'weekly'
+type ReportFilters = {
+  period: string
+  auditor: string
+  inventoryId: string
+  auditStatus: string
+  issueType: string
+  category: string
+}
+
+const defaultFilters: ReportFilters = {
+  period: 'all',
+  auditor: 'all',
+  inventoryId: 'all',
+  auditStatus: 'all',
+  issueType: 'all',
+  category: 'all',
+}
 
 export default function ReportsPage() {
   const { selectedRestaurant, restaurants, formatCurrency, t } = useAppContext()
-  const [selectedPeriod, setSelectedPeriod] = useState('month')
+  const [selectedPeriod, setSelectedPeriod] = useState(defaultFilters.period)
+  const [selectedSections, setSelectedSections] = useState<ReportSection[]>([])
+  const [draftFilters, setDraftFilters] = useState<ReportFilters>(defaultFilters)
+  const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(defaultFilters)
+  const [activeHelp, setActiveHelp] = useState<null | { label: string; help: string }>(null)
+  const [pinnedHelp, setPinnedHelp] = useState<null | { label: string; help: string }>(null)
+  const [areFiltersOpen, setAreFiltersOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-  const allItems = selectedRestaurant.inventoryTypes.flatMap((type) => type.items)
-  const completedAudits = selectedRestaurant.audits.filter((audit) => audit.status === 'completed')
+  const rawItems = selectedRestaurant.inventoryTypes.flatMap((type) => type.items)
+  const rawAudits = selectedRestaurant.audits
+  const auditorOptions = Array.from(new Set(rawAudits.map((audit) => audit.auditor).filter(Boolean))).sort()
+  const categoryOptions = Array.from(new Set(rawItems.map((item) => item.category).filter(Boolean))).sort()
+
+  const isWithinPeriod = (dateString: string | null | undefined, period: string) => {
+    if (!dateString || period === 'all') return true
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return true
+    const now = new Date()
+    const days =
+      period === 'week' ? 7 :
+      period === 'quarter' ? 90 :
+      period === 'year' ? 365 :
+      30
+    return now.getTime() - date.getTime() <= days * 24 * 60 * 60 * 1000
+  }
+
+  const filteredAudits = rawAudits.filter((audit) => {
+    const matchesPeriod = isWithinPeriod(audit.completedDate ?? audit.createdDate, appliedFilters.period)
+    const matchesAuditor = appliedFilters.auditor === 'all' || audit.auditor === appliedFilters.auditor
+    const matchesInventory = appliedFilters.inventoryId === 'all' || audit.inventoryId === Number(appliedFilters.inventoryId)
+    const matchesStatus = appliedFilters.auditStatus === 'all' || audit.status === appliedFilters.auditStatus
+    return matchesPeriod && matchesAuditor && matchesInventory && matchesStatus
+  })
+  const completedAudits = filteredAudits.filter((audit) => audit.status === 'completed')
+  const allItems = rawItems.filter((item) => {
+    const matchesInventory = appliedFilters.inventoryId === 'all' || item.typeId === Number(appliedFilters.inventoryId)
+    const matchesCategory = appliedFilters.category === 'all' || item.category === appliedFilters.category
+    const matchesIssue =
+      appliedFilters.issueType === 'all' ||
+      (appliedFilters.issueType === 'low' && item.status === 'low') ||
+      (appliedFilters.issueType === 'critical' && item.status === 'critical') ||
+      (appliedFilters.issueType === 'expiring' && Boolean(item.daysUntilExpiry && item.daysUntilExpiry <= 7)) ||
+      (appliedFilters.issueType === 'stable' && item.status === 'good' && (!item.daysUntilExpiry || item.daysUntilExpiry > 7))
+    return matchesInventory && matchesCategory && matchesIssue
+  })
   const complianceRate =
     completedAudits.reduce((sum, audit) => sum + audit.compliance, 0) / Math.max(completedAudits.length, 1)
   const issuesCount = allItems.filter((item) => item.status === 'low' || item.status === 'critical').length
   const inventoryValue = allItems.reduce((sum, item) => sum + item.quantity * item.price, 0)
-  const avgIssuesPerAudit = issuesCount / Math.max(selectedRestaurant.audits.length, 1)
+  const mermaItems = allItems.filter((item) => item.phase === 'merma')
+  const productionItems = allItems.filter((item) => item.phase === 'production')
+  const mermaQuantity = mermaItems.reduce((sum, item) => sum + (item.mermaQuantity ?? 0), 0)
+  const productionQuantity = productionItems.reduce((sum, item) => sum + (item.productionQuantity ?? 0), 0)
+  const completedAuditMermaQuantity = completedAudits.reduce(
+    (sum, audit) => sum + (audit.items ?? []).reduce((itemSum, item) => itemSum + (item.mermaQuantity ?? 0), 0),
+    0,
+  )
+  const completedAuditProductionQuantity = completedAudits.reduce(
+    (sum, audit) => sum + (audit.items ?? []).reduce((itemSum, item) => itemSum + (item.productionQuantity ?? 0), 0),
+    0,
+  )
+  const avgIssuesPerAudit = issuesCount / Math.max(filteredAudits.length, 1)
   const avgAuditTime = Math.round(
     completedAudits.reduce((sum, audit) => sum + 35 + audit.flaggedItems * 4 + Math.ceil(audit.totalItems / 2), 0) /
       Math.max(completedAudits.length, 1),
@@ -38,27 +110,34 @@ export default function ReportsPage() {
   }, [completedAudits])
 
   const issuesByCategoryData = useMemo(() => {
+    const totalIssues = Math.max(issuesCount, 1)
     return Object.values(
-      allItems.reduce<Record<string, { category: string; issues: number }>>((acc, item) => {
-        acc[item.category] ??= { category: item.category, issues: 0 }
+      allItems.reduce<Record<string, { category: string; issues: number; items: number; value: number }>>((acc, item) => {
+        acc[item.category] ??= { category: item.category, issues: 0, items: 0, value: 0 }
+        acc[item.category].items += 1
+        acc[item.category].value += item.quantity * item.price
         if (item.status === 'low' || item.status === 'critical' || (item.daysUntilExpiry && item.daysUntilExpiry <= 7)) {
           acc[item.category].issues += 1
         }
         return acc
       }, {}),
-    ).filter((entry) => entry.issues > 0)
-  }, [allItems])
+    )
+      .map((entry) => ({ ...entry, percentage: (entry.issues / totalIssues) * 100 }))
+      .filter((entry) => entry.issues > 0)
+  }, [allItems, issuesCount])
 
   const complianceData = useMemo(() => {
-    return selectedRestaurant.inventoryTypes.map((inventory) => {
-      const inventoryAudits = selectedRestaurant.audits.filter((audit) => audit.inventoryId === inventory.id)
+    return selectedRestaurant.inventoryTypes
+    .filter((inventory) => appliedFilters.inventoryId === 'all' || inventory.id === Number(appliedFilters.inventoryId))
+    .map((inventory) => {
+      const inventoryAudits = filteredAudits.filter((audit) => audit.inventoryId === inventory.id)
       return {
         name: inventory.name,
         compliance:
           inventoryAudits.reduce((sum, audit) => sum + audit.compliance, 0) / Math.max(inventoryAudits.length, 1),
       }
     })
-  }, [selectedRestaurant])
+  }, [appliedFilters.inventoryId, filteredAudits, selectedRestaurant.inventoryTypes])
 
   const severityData = useMemo(() => {
     const critical = allItems.filter((item) => item.status === 'critical').length
@@ -90,17 +169,142 @@ export default function ReportsPage() {
     return buckets.length ? buckets : [{ week: t('completed'), auditsCompleted: 0, avgComplianceRate: 0, issuesFound: issuesCount }]
   }, [completedAudits, issuesCount, t])
 
+  const reportSections: Array<{ id: ReportSection; label: string; help: string }> = [
+    { id: 'trend', label: t('auditCompletionTrend'), help: t('auditTrendHelp') },
+    { id: 'category', label: t('issuesByCategory'), help: t('issuesByCategoryHelp') },
+    { id: 'compliance', label: t('complianceByInventory'), help: t('complianceByInventoryHelp') },
+    { id: 'severity', label: t('issueSeverity'), help: t('issueSeverityHelp') },
+    { id: 'duration', label: t('auditDurationIssues'), help: t('auditDurationHelp') },
+    { id: 'weekly', label: t('weeklyPerformance'), help: t('weeklyPerformanceHelp') },
+  ]
+
+  const shouldShowSection = (section: ReportSection) => selectedSections.length === 0 || selectedSections.includes(section)
+
+  const toggleSection = (section: ReportSection) => {
+    setSelectedSections((current) =>
+      current.includes(section) ? current.filter((entry) => entry !== section) : [...current, section],
+    )
+  }
+
+  const SectionTitle = ({ label, help }: { label: string; help: string }) => (
+    <div className="relative flex items-center gap-2">
+      <span>{label}</span>
+      <button
+        type="button"
+        aria-label={`${t('reportHelp')}: ${label}`}
+        onMouseEnter={() => setActiveHelp({ label, help })}
+        onMouseLeave={() => setActiveHelp((current) => current?.label === label ? null : current)}
+        onClick={() => setPinnedHelp((current) => current?.label === label ? null : { label, help })}
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
+      >
+        <HelpCircle size={14} />
+      </button>
+      {(activeHelp?.label === label || pinnedHelp?.label === label) && (
+        <div className="absolute left-0 top-8 z-30 w-72 rounded-lg border border-border bg-card p-3 text-sm font-normal text-muted-foreground shadow-xl">
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <p className="font-semibold text-foreground">{label}</p>
+            {pinnedHelp?.label === label && (
+              <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setPinnedHelp(null)}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <p>{help}</p>
+        </div>
+      )}
+    </div>
+  )
+
+  const CategoryTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ payload: { items: number; value: number; percentage: number; issues: number } }>; label?: string }) => {
+    if (!active || !payload?.length) return null
+    const data = payload[0].payload
+    return (
+      <div className="rounded-lg border border-border bg-card p-3 text-sm shadow-xl">
+        <p className="font-semibold text-foreground">{label}</p>
+        <p className="text-muted-foreground">{t('itemsCount')}: <span className="text-foreground">{data.items}</span></p>
+        <p className="text-muted-foreground">{t('inventoryIssues')}: <span className="text-foreground">{data.issues}</span></p>
+        <p className="text-muted-foreground">{t('categoryValue')}: <span className="text-foreground">{formatCurrency(data.value)}</span></p>
+        <p className="text-muted-foreground">{t('percentageOfIssues')}: <span className="text-foreground">{data.percentage.toFixed(1)}%</span></p>
+      </div>
+    )
+  }
+
+  const SeverityTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name?: string; value?: number; payload: { name: string; value: number } }> }) => {
+    if (!active || !payload?.length) return null
+    const data = payload[0].payload
+    const total = severityData.reduce((sum, entry) => sum + entry.value, 0)
+    const percentage = total > 0 ? (data.value / total) * 100 : 0
+    return (
+      <div className="rounded-lg border border-border bg-card p-3 text-sm shadow-xl">
+        <p className="font-semibold text-foreground">{data.name}</p>
+        <p className="text-muted-foreground">{t('itemsCount')}: <span className="text-foreground">{data.value}</span></p>
+        <p className="text-muted-foreground">{t('percentageOfIssues')}: <span className="text-foreground">{percentage.toFixed(1)}%</span></p>
+      </div>
+    )
+  }
+
+  const pendingFilters = { ...draftFilters, period: selectedPeriod }
+  const hasPendingFilterChanges = JSON.stringify(pendingFilters) !== JSON.stringify(appliedFilters)
+
+  const handleOpenFilters = () => {
+    setDraftFilters(appliedFilters)
+    setSelectedPeriod(appliedFilters.period)
+    setAreFiltersOpen(true)
+  }
+
+  const handleApplyFilters = () => {
+    setAppliedFilters(pendingFilters)
+    setAreFiltersOpen(false)
+  }
+
+  const handleCancelFilters = () => {
+    setDraftFilters(appliedFilters)
+    setSelectedPeriod(appliedFilters.period)
+    setAreFiltersOpen(false)
+  }
+
+  const handleResetFilters = () => {
+    setSelectedPeriod(defaultFilters.period)
+    setDraftFilters(defaultFilters)
+    setAppliedFilters(defaultFilters)
+    setSelectedSections([])
+    setAreFiltersOpen(false)
+  }
+
+  const getSectionMetric = (section: ReportSection) => {
+    switch (section) {
+      case 'trend':
+        return `${completedAudits.length} ${t('completed')}`
+      case 'category':
+        return `${issuesCount} ${t('issuesFound')}`
+      case 'compliance':
+        return `${complianceRate.toFixed(1)}%`
+      case 'severity':
+        return `${severityData.length} ${t('status')}`
+      case 'duration':
+        return `${avgAuditTime} min`
+      case 'weekly':
+        return `${weeklyData.length} ${t('items')}`
+    }
+  }
+
   const exportReport = () => {
     setIsExporting(true)
     window.setTimeout(() => {
       const rows = [
         ['Restaurant', selectedRestaurant.name],
-        ['Period', selectedPeriod],
+        ['Period', appliedFilters.period],
         ['Inventory Value', inventoryValue],
-        ['Total Audits', selectedRestaurant.audits.length],
+        ['Total Audits', filteredAudits.length],
         ['Completed Audits', completedAudits.length],
         ['Compliance Rate', complianceRate.toFixed(1)],
         ['Inventory Issues', issuesCount],
+        ['Merma Items', mermaItems.length],
+        ['Merma Quantity', mermaQuantity],
+        ['Completed Audit Merma Quantity', completedAuditMermaQuantity],
+        ['Production Items', productionItems.length],
+        ['Production Quantity', productionQuantity],
+        ['Completed Audit Production Quantity', completedAuditProductionQuantity],
       ]
       const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n')
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
@@ -136,39 +340,152 @@ export default function ReportsPage() {
 
           {/* Filters */}
           <Card className="bg-card border-border">
-            <CardContent className="pt-6 flex flex-wrap gap-4">
-              <div>
-                <label className="text-sm font-medium text-foreground block mb-2">{t('period')}</label>
-                <select
-                  value={selectedPeriod}
-                  onChange={(e) => setSelectedPeriod(e.target.value)}
-                  className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
+            <CardContent className="space-y-4 pt-6">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleOpenFilters}
                 >
-                  <option value="week">{t('lastWeek')}</option>
-                  <option value="month">{t('lastMonth')}</option>
-                  <option value="quarter">{t('lastQuarter')}</option>
-                  <option value="year">{t('lastYear')}</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground block mb-2">{t('restaurant')}</label>
-                <select
-                  value={selectedRestaurant.id}
-                  disabled
-                  className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
-                >
-                  {restaurants.map(r => (
-                    <option key={r.id} value={r.id} className="bg-secondary">
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-end">
-                <Button variant="outline" className="gap-2">
                   <Filter size={16} />
                   {t('applyFilters')}
                 </Button>
+              </div>
+              {areFiltersOpen && (
+                <div className="grid gap-4 rounded-lg border border-border bg-secondary/10 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">{t('period')}</label>
+                    <select
+                      value={selectedPeriod}
+                      onChange={(e) => {
+                        setSelectedPeriod(e.target.value)
+                        setDraftFilters((current) => ({ ...current, period: e.target.value }))
+                      }}
+                      className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
+                    >
+                      <option value="all">{t('allTime')}</option>
+                      <option value="week">{t('lastWeek')}</option>
+                      <option value="month">{t('lastMonth')}</option>
+                      <option value="quarter">{t('lastQuarter')}</option>
+                      <option value="year">{t('lastYear')}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">{t('responsiblePerson')}</label>
+                    <select
+                      value={draftFilters.auditor}
+                      onChange={(event) => setDraftFilters((current) => ({ ...current, auditor: event.target.value }))}
+                      className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
+                    >
+                      <option value="all">{t('allPeople')}</option>
+                      {auditorOptions.map((auditor) => (
+                        <option key={auditor} value={auditor} className="bg-secondary">{auditor}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">{t('inventory')}</label>
+                    <select
+                      value={draftFilters.inventoryId}
+                      onChange={(event) => setDraftFilters((current) => ({ ...current, inventoryId: event.target.value }))}
+                      className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
+                    >
+                      <option value="all">{t('allInventories')}</option>
+                      {selectedRestaurant.inventoryTypes.map((inventory) => (
+                        <option key={inventory.id} value={inventory.id} className="bg-secondary">{inventory.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">{t('auditStatus')}</label>
+                    <select
+                      value={draftFilters.auditStatus}
+                      onChange={(event) => setDraftFilters((current) => ({ ...current, auditStatus: event.target.value }))}
+                      className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
+                    >
+                      <option value="all">{t('allStatuses')}</option>
+                      <option value="completed">{t('completed')}</option>
+                      <option value="in-progress">{t('inProgress')}</option>
+                      <option value="not-started">{t('notStarted')}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">{t('inventoryIssueFilter')}</label>
+                    <select
+                      value={draftFilters.issueType}
+                      onChange={(event) => setDraftFilters((current) => ({ ...current, issueType: event.target.value }))}
+                      className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
+                    >
+                      <option value="all">{t('allIssues')}</option>
+                      <option value="critical">{t('critical')}</option>
+                      <option value="low">{t('lowStock')}</option>
+                      <option value="expiring">{t('expiringSoon')}</option>
+                      <option value="stable">{t('stable')}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">{t('category')}</label>
+                    <select
+                      value={draftFilters.category}
+                      onChange={(event) => setDraftFilters((current) => ({ ...current, category: event.target.value }))}
+                      className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
+                    >
+                      <option value="all">{t('allCategories')}</option>
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category} className="bg-secondary">{category}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-2">{t('restaurant')}</label>
+                    <select
+                      value={selectedRestaurant.id}
+                      disabled
+                      className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent cursor-pointer"
+                    >
+                      {restaurants.map(r => (
+                        <option key={r.id} value={r.id} className="bg-secondary">
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button variant="outline" className="w-full bg-transparent" onClick={handleResetFilters}>
+                      {t('resetFilters')}
+                    </Button>
+                  </div>
+                  {hasPendingFilterChanges && (
+                    <div className="flex flex-col gap-2 border-t border-border pt-4 sm:col-span-2 sm:flex-row lg:col-span-3 xl:col-span-4">
+                      <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto" onClick={handleApplyFilters}>
+                        {t('applyFilters')}
+                      </Button>
+                      <Button variant="outline" className="w-full bg-transparent sm:w-auto" onClick={handleCancelFilters}>
+                        {t('cancel')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="basis-full">
+                <label className="mb-2 block text-sm font-medium text-foreground">{t('reportSections')}</label>
+                <div className="flex flex-wrap gap-2">
+                  {reportSections.map((section) => (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => toggleSection(section.id)}
+                      className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        selectedSections.includes(section.id)
+                          ? 'border-primary bg-primary/15 text-primary'
+                          : 'border-border bg-secondary/20 text-muted-foreground hover:text-foreground'
+                      }`}
+                      title={section.help}
+                    >
+                      {section.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -177,7 +494,9 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">{t('avgIssuesPerAudit')}</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">
+                  <SectionTitle label={t('avgIssuesPerAudit')} help={t('avgIssuesHelp')} />
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-foreground">{avgIssuesPerAudit.toFixed(1)}</p>
@@ -186,7 +505,9 @@ export default function ReportsPage() {
             </Card>
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">{t('complianceRate')}</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">
+                  <SectionTitle label={t('complianceRate')} help={t('complianceRateHelp')} />
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-accent">{complianceRate.toFixed(1)}%</p>
@@ -195,7 +516,9 @@ export default function ReportsPage() {
             </Card>
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">{t('avgAuditTime')}</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">
+                  <SectionTitle label={t('avgAuditTime')} help={t('avgAuditTimeHelp')} />
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-foreground">{avgAuditTime} min</p>
@@ -204,10 +527,12 @@ export default function ReportsPage() {
             </Card>
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">{t('totalAudits')}</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">
+                  <SectionTitle label={t('totalAudits')} help={t('totalAuditsHelp')} />
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-primary">{selectedRestaurant.audits.length}</p>
+                <p className="text-2xl font-bold text-primary">{filteredAudits.length}</p>
                 <p className="text-xs text-accent mt-1">↑ 12 from last period</p>
               </CardContent>
             </Card>
@@ -216,9 +541,9 @@ export default function ReportsPage() {
           {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Audit Completion Trend */}
-            <Card className="bg-card border-border">
+            {shouldShowSection('trend') && <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>{t('auditCompletionTrend')}</CardTitle>
+                <CardTitle><SectionTitle label={t('auditCompletionTrend')} help={t('auditTrendHelp')} /></CardTitle>
                 <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -252,12 +577,12 @@ export default function ReportsPage() {
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </Card>}
 
             {/* Issues by Category */}
-            <Card className="bg-card border-border">
+            {shouldShowSection('category') && <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>{t('issuesByCategory')}</CardTitle>
+                <CardTitle><SectionTitle label={t('issuesByCategory')} help={t('issuesByCategoryHelp')} /></CardTitle>
                 <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -266,23 +591,17 @@ export default function ReportsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis stroke="var(--muted-foreground)" />
                     <YAxis stroke="var(--muted-foreground)" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'var(--card)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px'
-                      }}
-                    />
+                    <Tooltip content={<CategoryTooltip />} />
                     <Bar dataKey="issues" fill="var(--primary)" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </Card>}
 
             {/* Compliance by Restaurant */}
-            <Card className="bg-card border-border">
+            {shouldShowSection('compliance') && <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>{t('complianceByInventory')}</CardTitle>
+                <CardTitle><SectionTitle label={t('complianceByInventory')} help={t('complianceByInventoryHelp')} /></CardTitle>
                 <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -302,12 +621,12 @@ export default function ReportsPage() {
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </Card>}
 
             {/* Issue Severity Distribution */}
-            <Card className="bg-card border-border">
+            {shouldShowSection('severity') && <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>{t('issueSeverity')}</CardTitle>
+                <CardTitle><SectionTitle label={t('issueSeverity')} help={t('issueSeverityHelp')} /></CardTitle>
                 <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center">
@@ -326,22 +645,16 @@ export default function ReportsPage() {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'var(--card)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px'
-                      }}
-                    />
+                    <Tooltip content={<SeverityTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </Card>}
 
             {/* Audit Duration vs Issues */}
-            <Card className="bg-card border-border lg:col-span-2">
+            {shouldShowSection('duration') && <Card className="bg-card border-border lg:col-span-2">
               <CardHeader>
-                <CardTitle>{t('auditDurationIssues')}</CardTitle>
+                <CardTitle><SectionTitle label={t('auditDurationIssues')} help={t('auditDurationHelp')} /></CardTitle>
                 <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -364,12 +677,12 @@ export default function ReportsPage() {
                   </ScatterChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </Card>}
 
             {/* Weekly Performance */}
-            <Card className="bg-card border-border lg:col-span-2">
+            {shouldShowSection('weekly') && <Card className="bg-card border-border lg:col-span-2">
               <CardHeader>
-                <CardTitle>{t('weeklyPerformance')}</CardTitle>
+                <CardTitle><SectionTitle label={t('weeklyPerformance')} help={t('weeklyPerformanceHelp')} /></CardTitle>
                 <CardDescription>{selectedRestaurant.name}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -410,13 +723,36 @@ export default function ReportsPage() {
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </Card>}
           </div>
+          {selectedSections.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {selectedSections.map((sectionId) => {
+                const section = reportSections.find((entry) => entry.id === sectionId)
+                if (!section) return null
+                return (
+                  <Card key={section.id} className="bg-card border-border">
+                    <CardHeader>
+                      <CardTitle><SectionTitle label={`${t('reportDetails')}: ${section.label}`} help={section.help} /></CardTitle>
+                      <CardDescription>{selectedRestaurant.name}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-2xl font-bold text-foreground">{getSectionMetric(section.id)}</p>
+                      <p className="text-sm text-muted-foreground">{section.help}</p>
+                      <div className="rounded-lg border border-border bg-secondary/20 p-3 text-sm text-muted-foreground">
+                        {t('inventoryValue')}: <span className="font-semibold text-foreground">{formatCurrency(inventoryValue)}</span> · {t('completed')}: <span className="font-semibold text-foreground">{completedAudits.length}</span> · {t('inventoryIssues')}: <span className="font-semibold text-foreground">{issuesCount}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
         </main>
       </div>
       {isExportOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-3xl rounded-lg border border-border bg-card">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setIsExportOpen(false)}>
+          <div className="w-full max-w-3xl rounded-lg border border-border bg-card" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-border p-6">
               <div>
                 <h2 className="text-xl font-bold text-foreground">{t('reportSummary')}</h2>
@@ -444,10 +780,23 @@ export default function ReportsPage() {
                   <p className="text-xs text-muted-foreground">{t('complianceRate')}</p>
                   <p className="mt-1 text-2xl font-bold text-primary">{complianceRate.toFixed(1)}%</p>
                 </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('mermaStock')}</p>
+                  <p className="mt-1 text-2xl font-bold text-destructive">{mermaQuantity}</p>
+                  <p className="text-xs text-muted-foreground">{mermaItems.length} {t('items')}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t('productionStock')}</p>
+                  <p className="mt-1 text-2xl font-bold text-accent">{productionQuantity}</p>
+                  <p className="text-xs text-muted-foreground">{productionItems.length} {t('items')}</p>
+                </div>
               </div>
               <div className="rounded-lg border border-border bg-secondary/20 p-4">
                 <p className="text-sm text-muted-foreground">
-                  {t('totalAudits')}: <span className="font-semibold text-foreground">{selectedRestaurant.audits.length}</span> · {t('avgAuditTime')}: <span className="font-semibold text-foreground">{avgAuditTime} min</span> · {t('period')}: <span className="font-semibold text-foreground">{selectedPeriod}</span>
+                  {t('totalAudits')}: <span className="font-semibold text-foreground">{filteredAudits.length}</span> · {t('avgAuditTime')}: <span className="font-semibold text-foreground">{avgAuditTime} min</span> · {t('period')}: <span className="font-semibold text-foreground">{appliedFilters.period}</span>
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t('mermaQuantity')}: <span className="font-semibold text-foreground">{completedAuditMermaQuantity}</span> · {t('productionQuantity')}: <span className="font-semibold text-foreground">{completedAuditProductionQuantity}</span>
                 </p>
               </div>
               <div className="flex justify-end gap-3 border-t border-border pt-4">

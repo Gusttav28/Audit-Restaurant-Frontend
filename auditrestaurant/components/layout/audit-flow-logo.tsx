@@ -1,22 +1,41 @@
 "use client"
 
-import { CheckCircle2, Waves } from "lucide-react"
+import Image from "next/image"
 
 interface AuditFlowLogoProps {
   collapsed?: boolean
+  className?: string
+  imageClassName?: string
+  textClassName?: string
 }
 
-export default function AuditFlowLogo({ collapsed = false }: AuditFlowLogoProps) {
+export default function AuditFlowLogo({
+  collapsed = false,
+  className = "",
+  imageClassName = "h-9 w-9 rounded-lg",
+  textClassName = "text-sidebar-foreground",
+}: AuditFlowLogoProps) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent/15">
-        <Waves size={22} className="text-accent" />
-        <CheckCircle2 size={13} className="absolute -right-1 -top-1 rounded-full bg-sidebar text-primary" />
-      </div>
+    <div className={`flex min-w-0 items-center gap-2 ${className}`}>
+      <Image
+        src="/audit-coflow-logo-dark.jpg"
+        alt="Audit Coflow"
+        width={92}
+        height={92}
+        priority
+        className={`hidden shrink-0 object-cover shadow-sm dark:block ${imageClassName}`}
+      />
+      <Image
+        src="/audit-coflow-logo-light.jpg"
+        alt="Audit Coflow"
+        width={92}
+        height={92}
+        priority
+        className={`shrink-0 object-cover shadow-sm dark:hidden ${imageClassName}`}
+      />
       {!collapsed && (
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold text-sidebar-foreground">Audit Flow</h1>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Inventory audits</p>
+          <h1 className={`truncate text-xl font-bold ${textClassName}`}>Audit Coflow</h1>
         </div>
       )}
     </div>

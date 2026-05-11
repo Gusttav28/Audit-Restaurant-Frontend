@@ -6,7 +6,9 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { ClipboardCheck, Eye, EyeOff, Loader2 } from "lucide-react"
+import { clearSupabaseBrowserState, createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -28,35 +30,51 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
-    // Simulate authentication
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    await createSupabaseBrowserClient().auth.signOut({ scope: "global" })
+    clearSupabaseBrowserState()
+    const supabase = createSupabaseBrowserClient()
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password,
+    })
 
-    // Demo: accept any email/password for now
-    if (formData.email && formData.password) {
-      // Store auth state
+    if (signInError) {
+      setError(signInError.message)
+      setIsLoading(false)
+      return
+    }
+
+    if (data.user) {
       localStorage.setItem("auditflow_user", JSON.stringify({
         email: formData.email,
-        name: formData.email.split("@")[0],
+        name: data.user.user_metadata.full_name ?? data.user.email?.split("@")[0] ?? "admin",
         subscription: null
       }))
-      router.push("/subscription")
+      sessionStorage.setItem("auditflow-auth-transition", "login")
+      window.location.assign("/dashboard")
     } else {
-      setError("Please enter your email and password")
+      setError("Unable to sign in. Please try again.")
       setIsLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen bg-background flex">
+      {isLoading && (
+        <div className="fixed inset-0 z-[100] flex h-dvh w-screen items-center justify-center bg-background">
+          <div className="text-center">
+            <AuditFlowLogo collapsed className="mx-auto mb-4 animate-pulse justify-center" imageClassName="h-16 w-16 rounded-2xl" />
+            <p className="text-sm uppercase tracking-widest text-muted-foreground">Signing in...</p>
+            <h2 className="mt-2 text-2xl font-bold text-foreground">Audit Coflow</h2>
+          </div>
+        </div>
+      )}
       {/* Left Side - Form */}
       <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-20 xl:px-24">
         <div className="w-full max-w-sm mx-auto">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 mb-12">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <ClipboardCheck size={22} className="text-primary-foreground" />
-            </div>
-            <span className="text-xl font-semibold text-foreground">AuditFlow</span>
+            <AuditFlowLogo imageClassName="h-10 w-10 rounded-lg" textClassName="text-foreground" />
           </Link>
 
           {/* Header */}
@@ -183,7 +201,7 @@ export default function LoginPage() {
               ))}
             </div>
             <p className="text-sm text-muted-foreground">
-              Join 2,500+ teams already using AuditFlow
+              Join 2,500+ teams already using Audit Coflow
             </p>
           </div>
         </div>

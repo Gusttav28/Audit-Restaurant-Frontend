@@ -7,12 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAppContext } from "@/components/app-context"
 
 export default function ProfilePage() {
-  const { selectedRestaurant, t } = useAppContext()
+  const { restaurants, selectedRestaurant, currentUserName, currentUserEmail, currentPermissions, isAdmin, t } = useAppContext()
   const profile = {
-    name: "John Smith",
-    email: "john@restaurant.com",
-    role: t("admin"),
+    name: currentUserName,
+    email: currentUserEmail,
+    role: isAdmin ? t("admin") : selectedRestaurant.currentUserRole === "auditor" ? t("auditorRole") : t("collaborator"),
   }
+  const allowedPermissions = Object.entries(currentPermissions)
+    .filter(([, allowed]) => allowed)
+    .map(([permission]) => permission === "audit" ? t("auditPermission") : t(permission as "read" | "create" | "edit" | "delete"))
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -36,6 +39,7 @@ export default function ProfilePage() {
                 <span className="mt-3 rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
                   {profile.role}
                 </span>
+                <p className="mt-3 text-xs text-muted-foreground">{allowedPermissions.join(" + ")}</p>
               </CardContent>
             </Card>
 
@@ -73,6 +77,20 @@ export default function ProfilePage() {
                   </div>
                   <p className="font-semibold text-foreground">{selectedRestaurant.name}</p>
                   <p className="text-xs text-muted-foreground">{selectedRestaurant.location}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4 sm:col-span-2">
+                  <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Store size={16} className="text-primary" />
+                    {t("assignedRestaurants")}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {restaurants.map((restaurant) => (
+                      <div key={restaurant.id} className="rounded-lg border border-border bg-background/50 px-3 py-2">
+                        <p className="font-medium text-foreground">{restaurant.name}</p>
+                        <p className="text-xs text-muted-foreground">{restaurant.location}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>

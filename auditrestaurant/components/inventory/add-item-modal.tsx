@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
-import { X, Plus, ChevronDown, ChevronUp, Trash2, Loader2 } from "lucide-react"
+import { X, Plus, ChevronDown, ChevronUp, Trash2, Loader2, Edit2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAppContext } from "@/components/app-context"
 
@@ -27,6 +27,11 @@ interface AddItemModalProps {
   lockInventoryType?: boolean
   suppliers?: string[]
   onRegisterSupplier?: (supplier: string) => void
+  onDeleteSupplier?: (supplier: string) => void
+  categories?: string[]
+  onAddCategory?: (category: string) => void
+  onRenameCategory?: (oldCategory: string, nextCategory: string) => void
+  onDeleteCategory?: (category: string) => void
 }
 
 const defaultUnits = [
@@ -64,22 +69,35 @@ export default function AddItemModal({
   lockInventoryType = false,
   suppliers = [],
   onRegisterSupplier,
+  onDeleteSupplier,
+  categories = [],
+  onAddCategory,
+  onRenameCategory,
+  onDeleteCategory,
 }: AddItemModalProps) {
-  const { selectedRestaurant, t } = useAppContext()
+  const { selectedRestaurant, exchangeRate, t } = useAppContext()
   const [formData, setFormData] = useState({
     name: "",
     type: selectedTypeName || inventoryTypes[0]?.name || "Kitchen",
-    category: "Herbs & Spices",
+    category: "",
     quantity: "",
     unit: "boxes",
     minStock: "",
     price: "",
+    priceCurrency: "USD" as "USD" | "CRC",
+    phase: "" as "" | "none" | "production" | "merma",
+    mermaQuantity: "",
+    productionQuantity: "",
     supplier: "",
   })
   const [isSaving, setIsSaving] = useState(false)
   const [showSupplierForm, setShowSupplierForm] = useState(false)
   const [supplierToRegister, setSupplierToRegister] = useState("")
   const [shouldSaveSupplier, setShouldSaveSupplier] = useState(true)
+  const [showCategoryForm, setShowCategoryForm] = useState(false)
+  const [categoryToCreate, setCategoryToCreate] = useState("")
+  const [categoryEdits, setCategoryEdits] = useState<Record<string, string>>({})
+  const [editingCategory, setEditingCategory] = useState("")
 
   useEffect(() => {
     if (!isOpen) return
@@ -87,8 +105,9 @@ export default function AddItemModal({
     setFormData((prev) => ({
       ...prev,
       type: selectedTypeName || inventoryTypes[0]?.name || "Kitchen",
+      priceCurrency: prev.name || prev.price ? prev.priceCurrency : selectedRestaurant.defaultCurrency ?? "USD",
     }))
-  }, [isOpen, inventoryTypes, selectedTypeName])
+  }, [isOpen, inventoryTypes, selectedRestaurant.defaultCurrency, selectedTypeName])
 
 
   const [showCustomUnitForm, setShowCustomUnitForm] = useState(false)
@@ -101,19 +120,6 @@ export default function AddItemModal({
     category: "weight" as "weight" | "volume" | "quantity" | "custom",
   })
 
-  const categories = [
-    "Oils & Vinegars",
-    "Herbs & Spices",
-    "Grains & Pasta",
-    "Dairy",
-    "Produce",
-    "Meat",
-    "Spirits",
-    "Mixers",
-    "Garnishes",
-    "Wine",
-  ]
-  
   const allUnits = [
     ...defaultUnits,
     ...customUnits.map(u => ({ name: u.name, value: u.abbreviation, category: u.category }))
@@ -164,17 +170,54 @@ export default function AddItemModal({
     setShowSupplierForm(false)
   }
 
+  const handleRegisterSupplierKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return
+    event.preventDefault()
+    handleRegisterSupplier()
+  }
+
+  const handleAddCategory = () => {
+    const category = categoryToCreate.trim()
+    if (!category) return
+    onAddCategory?.(category)
+    setFormData((prev) => ({ ...prev, category }))
+    setCategoryToCreate("")
+    setShowCategoryForm(false)
+  }
+
+  const handleCategoryKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return
+    event.preventDefault()
+    handleAddCategory()
+  }
+
+  const handleRenameCategory = (category: string) => {
+    onRenameCategory?.(category, categoryEdits[category] ?? category)
+    setEditingCategory("")
+  }
+
+  const handleRenameCategoryKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, category: string) => {
+    if (event.key !== "Enter") return
+    event.preventDefault()
+    handleRenameCategory(category)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.name && formData.quantity && formData.minStock && formData.price) {
+    if (formData.name && formData.category && formData.quantity && formData.minStock && formData.price) {
       const selectedCustomUnit = customUnits.find(u => u.abbreviation === formData.unit)
+      const price = Number.parseFloat(formData.price)
       setIsSaving(true)
       window.setTimeout(() => {
         onAdd({
           ...formData,
           quantity: Number.parseFloat(formData.quantity),
           minStock: Number.parseFloat(formData.minStock),
-          price: Number.parseFloat(formData.price),
+          price: formData.priceCurrency === "CRC" ? price / exchangeRate : price,
+          priceCurrency: formData.priceCurrency,
+          phase: formData.phase || undefined,
+          mermaQuantity: formData.phase === "merma" || formData.phase === "production" ? Number.parseFloat(formData.mermaQuantity) || 0 : undefined,
+          productionQuantity: formData.phase === "production" ? Number.parseFloat(formData.productionQuantity) || 0 : undefined,
           status: "good",
           lastUpdated: new Date().toISOString().split("T")[0],
           daysUntilExpiry: null,
@@ -183,11 +226,15 @@ export default function AddItemModal({
         setFormData({
           name: "",
           type: selectedTypeName || inventoryTypes[0]?.name || "Kitchen",
-          category: "Herbs & Spices",
+          category: "",
           quantity: "",
           unit: "boxes",
           minStock: "",
           price: "",
+          priceCurrency: selectedRestaurant.defaultCurrency ?? "USD",
+          phase: "",
+          mermaQuantity: "",
+          productionQuantity: "",
           supplier: "",
         })
         setShowSupplierForm(false)
@@ -201,8 +248,8 @@ export default function AddItemModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-lg w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-lg w-full max-w-3xl max-h-[92vh] overflow-y-auto" onClick={(event) => event.stopPropagation()}>
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-border">
           <div>
@@ -248,21 +295,99 @@ export default function AddItemModal({
             />
           </div>
 
-          {/* Category */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">{t("category")} *</label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent cursor-pointer"
-            >
-              {categories.map((cat) => (
-                <option key={cat} value={cat} className="bg-secondary">
-                  {cat}
-                </option>
-              ))}
-            </select>
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent cursor-pointer"
+              >
+                <option value="" className="bg-secondary">{categories.length ? t("category") : t("noCategories")}</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat} className="bg-secondary">
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <Button type="button" variant="outline" className="bg-transparent" onClick={() => setShowCategoryForm((open) => !open)}>
+                {categories.length ? t("manageCategories") : t("createCategory")}
+              </Button>
+            </div>
+            {showCategoryForm && (
+              <div className="mt-3 rounded-lg border border-border bg-secondary/20 p-3 space-y-3">
+                <label className="block text-xs font-medium text-muted-foreground">{t("categoryName")}</label>
+                <input
+                  value={categoryToCreate}
+                  onChange={(event) => setCategoryToCreate(event.target.value)}
+                  onKeyDown={handleCategoryKeyDown}
+                  className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent"
+                />
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" className="flex-1 bg-transparent" onClick={() => setShowCategoryForm(false)}>
+                    {t("cancel")}
+                  </Button>
+                  <Button type="button" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddCategory}>
+                    {t("createCategory")}
+                  </Button>
+                </div>
+                {categories.length > 0 && (
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <p className="text-xs font-medium text-muted-foreground">{t("manageCategories")}</p>
+                    {categories.map((category) => (
+                      <div key={category} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                        {editingCategory === category ? (
+                          <input
+                            value={categoryEdits[category] ?? category}
+                            onChange={(event) => setCategoryEdits((prev) => ({ ...prev, [category]: event.target.value }))}
+                            onKeyDown={(event) => handleRenameCategoryKeyDown(event, category)}
+                            className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent"
+                          />
+                        ) : (
+                          <span className="rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground">
+                            {category}
+                          </span>
+                        )}
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 w-9 bg-transparent p-0 text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+                            onClick={() => {
+                              if (editingCategory === category) {
+                                handleRenameCategory(category)
+                              } else {
+                                setCategoryEdits((prev) => ({ ...prev, [category]: prev[category] ?? category }))
+                                setEditingCategory(category)
+                              }
+                            }}
+                            title={editingCategory === category ? t("save") : t("edit")}
+                            aria-label={editingCategory === category ? t("save") : t("edit")}
+                          >
+                            <Edit2 size={14} />
+                          </Button>
+                          {onDeleteCategory && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-9 w-9 bg-transparent p-0 text-muted-foreground hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive/40"
+                              onClick={() => onDeleteCategory(category)}
+                              title={t("deleteCategory")}
+                              aria-label={t("deleteCategory")}
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           </div>
 
@@ -397,7 +522,16 @@ export default function AddItemModal({
                       <div className="flex gap-2">
                         <Button
                           type="button"
-                          onClick={() => setShowCustomUnitForm(false)}
+                          onClick={() => {
+                            setNewUnit({
+                              name: "",
+                              abbreviation: "",
+                              baseUnit: "g",
+                              conversionFactor: 1,
+                              category: "weight",
+                            })
+                            setShowCustomUnitForm(false)
+                          }}
                           variant="outline"
                           size="sm"
                           className="flex-1 text-xs bg-transparent"
@@ -472,19 +606,75 @@ export default function AddItemModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">{t("price")} *</label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="0.00"
-                step="0.01"
-                className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
-                required
-              />
+              <label className="block text-sm font-medium text-foreground mb-1">{t("pricePerUnit")} *</label>
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent"
+                  required
+                />
+                <select
+                  name="priceCurrency"
+                  value={formData.priceCurrency}
+                  onChange={handleChange}
+                  className="rounded-lg border border-border bg-secondary/30 px-2 py-2 text-sm text-foreground focus:outline-none focus:border-accent"
+                >
+                  <option value="USD">USD</option>
+                  <option value="CRC">CRC</option>
+                </select>
+              </div>
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">{t("itemPhase")}</label>
+            <select
+              name="phase"
+              value={formData.phase}
+              onChange={handleChange}
+              className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent cursor-pointer"
+            >
+              <option value="" className="bg-secondary">-</option>
+              <option value="none" className="bg-secondary">{t("noProductionStock")}</option>
+              <option value="production" className="bg-secondary">{t("productionStock")}</option>
+              <option value="merma" className="bg-secondary">{t("mermaStock")}</option>
+            </select>
+          </div>
+
+          {(formData.phase === "merma" || formData.phase === "production") && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">{t("mermaQuantity")}</label>
+              <input
+                type="number"
+                name="mermaQuantity"
+                value={formData.mermaQuantity}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent"
+              />
+            </div>
+          )}
+
+          {formData.phase === "production" && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">{t("productionQuantity")}</label>
+              <input
+                type="number"
+                name="productionQuantity"
+                value={formData.productionQuantity}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                className="w-full px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground focus:outline-none focus:border-accent"
+              />
+            </div>
+          )}
 
           {/* Supplier */}
           <div>
@@ -514,14 +704,16 @@ export default function AddItemModal({
             {suppliers.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {suppliers.map((supplier) => (
-                  <button
-                    type="button"
-                    key={supplier}
-                    onClick={() => setFormData((prev) => ({ ...prev, supplier }))}
-                    className="rounded-full border border-border bg-secondary/20 px-3 py-1 text-xs text-muted-foreground hover:border-accent hover:text-foreground"
-                  >
-                    {supplier}
-                  </button>
+                  <span key={supplier} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/20 px-3 py-1 text-xs text-muted-foreground">
+                    <button type="button" onClick={() => setFormData((prev) => ({ ...prev, supplier }))} className="hover:text-foreground">
+                      {supplier}
+                    </button>
+                    {onDeleteSupplier && (
+                      <button type="button" onClick={() => onDeleteSupplier(supplier)} className="text-destructive hover:text-destructive/80" aria-label={t("deleteProvider")}>
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </span>
                 ))}
               </div>
             )}
@@ -531,6 +723,7 @@ export default function AddItemModal({
                 <input
                   value={supplierToRegister}
                   onChange={(event) => setSupplierToRegister(event.target.value)}
+                  onKeyDown={handleRegisterSupplierKeyDown}
                   className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent"
                 />
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">

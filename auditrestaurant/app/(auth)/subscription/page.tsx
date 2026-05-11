@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { ClipboardCheck, Check, ArrowRight, ArrowLeft } from "lucide-react"
 
 const plans = [
@@ -103,10 +104,7 @@ export default function SubscriptionPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <ClipboardCheck size={18} className="text-primary-foreground" />
-              </div>
-              <span className="text-lg font-semibold text-foreground">AuditFlow</span>
+              <AuditFlowLogo imageClassName="h-8 w-8 rounded-lg" textClassName="text-foreground" />
             </Link>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span>Step 1 of 2</span>

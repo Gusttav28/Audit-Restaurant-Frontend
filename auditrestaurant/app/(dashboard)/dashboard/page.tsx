@@ -12,7 +12,7 @@ import { AlertCircle, CheckCircle, Clock, FileText, Package, Plus, TrendingUp } 
 import { useAppContext } from '@/components/app-context'
 
 export default function Dashboard() {
-  const { selectedRestaurant, t, formatCurrency, createAudit } = useAppContext()
+  const { selectedRestaurant, t, formatCurrency, createAudit, can } = useAppContext()
   const [isCreateAuditOpen, setIsCreateAuditOpen] = useState(false)
   const allItems = selectedRestaurant.inventoryTypes.flatMap((type) => type.items)
   const audits = selectedRestaurant.audits
@@ -89,7 +89,7 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold text-foreground">{t('dashboard')}</h1>
               <p className="text-muted-foreground mt-1">{t('dashboardSubtitle')} · {selectedRestaurant.name}</p>
             </div>
-            <Button onClick={() => setIsCreateAuditOpen(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+            <Button onClick={() => setIsCreateAuditOpen(true)} disabled={!can('audit')} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
               <Plus size={20} />
               {t('newAudit')}
             </Button>
@@ -219,8 +219,8 @@ export default function Dashboard() {
       <CreateAuditModal
         isOpen={isCreateAuditOpen}
         onClose={() => setIsCreateAuditOpen(false)}
-        onCreate={(audit) => {
-          createAudit(audit)
+        onCreate={async (audit) => {
+          await createAudit(audit)
           setIsCreateAuditOpen(false)
         }}
         inventoryTypes={inventoryTypes}

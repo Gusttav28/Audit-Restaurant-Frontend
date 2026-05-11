@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { 
   Package, ArrowRight, ArrowLeft, Check, Plus, Edit2, Trash2,
   Filter, Search, Tags, Layers, BarChart3, ClipboardCheck
@@ -57,10 +58,7 @@ export default function InventoryFeaturePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <ClipboardCheck size={18} className="text-primary-foreground" />
-              </div>
-              <span className="text-lg font-semibold text-foreground">AuditFlow</span>
+              <AuditFlowLogo imageClassName="h-8 w-8 rounded-lg" textClassName="text-foreground" />
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -103,7 +101,7 @@ export default function InventoryFeaturePage() {
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-semibold text-foreground mb-4">Overview</h2>
           <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-            AuditFlow's Inventory Management system allows you to create multiple inventories tailored to your business needs. 
+            Audit Coflow's Inventory Management system allows you to create multiple inventories tailored to your business needs. 
             Whether you manage a restaurant with separate kitchen and bar inventories, a warehouse with multiple storage zones, 
             or any business with diverse stock categories, our flexible system adapts to your workflow.
           </p>
@@ -244,7 +242,7 @@ export default function InventoryFeaturePage() {
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-border">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <span>2024 AuditFlow</span>
+          <span>2024 Audit Coflow</span>
           <div className="flex gap-6">
             <Link href="/features/audits" className="hover:text-foreground">Real-Time Audits</Link>
             <Link href="/features/history" className="hover:text-foreground">Audit History</Link>

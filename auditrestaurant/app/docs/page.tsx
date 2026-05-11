@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { 
   ClipboardCheck, Search, Book, Package, FileText, BarChart3, 
   Users, CreditCard, Settings, ChevronRight, ArrowRight
@@ -14,7 +15,7 @@ const categories = [
     icon: Book,
     description: "Learn the basics and set up your account",
     articles: [
-      { title: "Introduction to AuditFlow", slug: "introduction" },
+      { title: "Introduction to Audit Coflow", slug: "introduction" },
       { title: "Creating Your Account", slug: "creating-account" },
       { title: "Navigating the Dashboard", slug: "dashboard-overview" },
       { title: "Quick Start Guide", slug: "quick-start" },
@@ -105,10 +106,7 @@ export default function DocsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <ClipboardCheck size={18} className="text-primary-foreground" />
-              </div>
-              <span className="text-lg font-semibold text-foreground">AuditFlow</span>
+              <AuditFlowLogo imageClassName="h-8 w-8 rounded-lg" textClassName="text-foreground" />
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -129,7 +127,7 @@ export default function DocsPage() {
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl font-bold text-foreground mb-4">Documentation</h1>
           <p className="text-lg text-muted-foreground mb-8">
-            Everything you need to know about using AuditFlow effectively.
+            Everything you need to know about using Audit Coflow effectively.
           </p>
           
           {/* Search */}
@@ -232,7 +230,7 @@ export default function DocsPage() {
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-border">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <span>2024 AuditFlow</span>
+          <span>2024 Audit Coflow</span>
           <div className="flex gap-6">
             <Link href="/" className="hover:text-foreground">Home</Link>
             <Link href="/#features" className="hover:text-foreground">Features</Link>
