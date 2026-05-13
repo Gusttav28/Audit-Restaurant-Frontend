@@ -7,7 +7,7 @@
 do $$
 declare
   admin_user_id uuid;
-  delirio_id uuid;
+  goflow_restaurant_id uuid;
   kitchen_id uuid;
 begin
   select id into admin_user_id
@@ -29,23 +29,23 @@ begin
     created_by
   )
   values (
-    'Delirio',
+    'GoFlow Restaurant',
     'Costa Rica',
-    'Barrio Escalante',
-    'Barrio Escalante',
+    'GoFlow Demo District',
+    'GoFlow Demo District',
     'CRC',
     0.00197628,
     admin_user_id
   )
-  returning id into delirio_id;
+  returning id into goflow_restaurant_id;
 
   insert into public.restaurant_members (restaurant_id, user_id, role)
-  values (delirio_id, admin_user_id, 'owner');
+  values (goflow_restaurant_id, admin_user_id, 'owner');
 
   insert into public.inventory_types (restaurant_id, name, color, active, sort_order)
-  values (delirio_id, 'Kitchen', '#3b82f6', true, 1)
+  values (goflow_restaurant_id, 'Kitchen', '#3b82f6', true, 1)
   returning id into kitchen_id;
 
   insert into public.inventory_types (restaurant_id, name, color, active, sort_order)
-  values (delirio_id, 'Bar', '#8b5cf6', true, 2);
+  values (goflow_restaurant_id, 'Bar', '#8b5cf6', true, 2);
 end $$;

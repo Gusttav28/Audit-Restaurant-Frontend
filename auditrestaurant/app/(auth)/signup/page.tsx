@@ -107,7 +107,7 @@ export default function SignupPage() {
           </h2>
           <p className="text-muted-foreground leading-relaxed mb-8">
             Create unlimited inventories, perform precise audits, and gain insights 
-            into your stock flow. Audit Coflow helps teams stay organized and accountable.
+            into your stock flow. Audit Co-Flow helps teams stay organized and accountable.
           </p>
           
           <div className="space-y-4">

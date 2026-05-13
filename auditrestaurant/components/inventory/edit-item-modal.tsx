@@ -170,9 +170,9 @@ export default function EditItemModal({
   if (!isOpen || !item) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-card border border-border rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(event) => event.stopPropagation()}>
-        <div className="flex justify-between items-center p-6 border-b border-border sticky top-0 bg-card">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={onClose}>
+      <div className="auditflow-thin-scrollbar bg-card border border-border rounded-xl w-[calc(100vw-1rem)] sm:w-[calc(100vw-2rem)] max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto" onClick={(event) => event.stopPropagation()}>
+        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-border sticky top-0 z-10 bg-card">
           <div>
             <h2 className="text-xl font-bold text-foreground">Edit Item</h2>
             <p className="text-sm text-muted-foreground">Update item information</p>
@@ -182,7 +182,7 @@ export default function EditItemModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 sm:p-6">
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Item Name *</label>

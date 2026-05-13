@@ -2,10 +2,11 @@ import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import { AppProvider } from '@/components/app-context'
 import { ThemeProvider } from '@/components/theme-provider'
+import ThemeFavicon from '@/components/layout/theme-favicon'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Audit Coflow - Inventory & Audit Management',
+  title: 'Audit Co-Flow - Inventory & Audit Management',
   description: 'Professional restaurant audit and inventory management system',
   generator: 'v0.app',
   icons: {
@@ -36,6 +37,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="auditflow-theme">
+          <ThemeFavicon />
           <AppProvider>{children}</AppProvider>
         </ThemeProvider>
         <Analytics />

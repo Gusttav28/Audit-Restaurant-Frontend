@@ -15,7 +15,7 @@ const categories = [
     icon: Book,
     description: "Learn the basics and set up your account",
     articles: [
-      { title: "Introduction to Audit Coflow", slug: "introduction" },
+      { title: "Introduction to Audit Co-Flow", slug: "introduction" },
       { title: "Creating Your Account", slug: "creating-account" },
       { title: "Navigating the Dashboard", slug: "dashboard-overview" },
       { title: "Quick Start Guide", slug: "quick-start" },
@@ -127,7 +127,7 @@ export default function DocsPage() {
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl font-bold text-foreground mb-4">Documentation</h1>
           <p className="text-lg text-muted-foreground mb-8">
-            Everything you need to know about using Audit Coflow effectively.
+            Everything you need to know about using Audit Co-Flow effectively.
           </p>
           
           {/* Search */}
@@ -230,7 +230,7 @@ export default function DocsPage() {
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-border">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <span>2024 Audit Coflow</span>
+          <span>2024 Audit Co-Flow</span>
           <div className="flex gap-6">
             <Link href="/" className="hover:text-foreground">Home</Link>
             <Link href="/#features" className="hover:text-foreground">Features</Link>

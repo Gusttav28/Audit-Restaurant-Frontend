@@ -18,9 +18,20 @@ import {
 import AuditFlowLogo from '@/components/layout/audit-flow-logo'
 import { formatShortcut, isMacPlatform, shouldIgnoreShortcut, withShortcut, type ShortcutAction } from '@/components/layout/shortcut-utils'
 
+const RESPONSIVE_SIDEBAR_QUERY = '(max-width: 1279px)'
+
+function isResponsiveSidebarViewport() {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia(RESPONSIVE_SIDEBAR_QUERY).matches
+}
+
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window === 'undefined') return true
+    if (isResponsiveSidebarViewport()) {
+      document.documentElement.style.setProperty('--auditflow-sidebar-width', '0rem')
+      return false
+    }
     if (window.sessionStorage.getItem('auditflow-auth-transition') === 'login') {
       window.localStorage.setItem('auditflow-sidebar-open', 'true')
       document.documentElement.style.setProperty('--auditflow-sidebar-width', '16rem')
@@ -49,6 +60,7 @@ export default function Sidebar() {
     startRouteLoading,
   } = useAppContext()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isResponsiveSidebar, setIsResponsiveSidebar] = useState(false)
   const isCollapsed = !isOpen
 
   const menuItems = [
@@ -60,15 +72,41 @@ export default function Sidebar() {
   ]
 
   useEffect(() => {
-    window.localStorage.setItem('auditflow-sidebar-open', String(isOpen))
-  }, [isOpen])
+    const media = window.matchMedia(RESPONSIVE_SIDEBAR_QUERY)
+    const syncResponsiveState = () => {
+      const isResponsive = media.matches
+      setIsResponsiveSidebar(isResponsive)
+      if (isResponsive) {
+        setIsOpen(false)
+      } else {
+        const storedPreference = window.localStorage.getItem('auditflow-sidebar-open')
+        setIsOpen(storedPreference === null ? true : storedPreference === 'true')
+      }
+    }
+
+    syncResponsiveState()
+    media.addEventListener('change', syncResponsiveState)
+    return () => media.removeEventListener('change', syncResponsiveState)
+  }, [])
+
+  useEffect(() => {
+    if (!isResponsiveSidebar) {
+      window.localStorage.setItem('auditflow-sidebar-open', String(isOpen))
+    }
+  }, [isOpen, isResponsiveSidebar])
 
   useEffect(() => {
     document.documentElement.style.setProperty(
       '--auditflow-sidebar-width',
-      isOpen ? '16rem' : '5rem',
+      isResponsiveSidebar ? (isOpen ? '16rem' : '0rem') : (isOpen ? '16rem' : '5rem'),
     )
-  }, [isOpen])
+  }, [isOpen, isResponsiveSidebar])
+
+  const closeResponsiveSidebar = () => {
+    if (isResponsiveSidebarViewport()) {
+      setIsOpen(false)
+    }
+  }
 
   const handleLogout = async () => {
     if (isAppLoading) return
@@ -178,15 +216,15 @@ export default function Sidebar() {
           if (!isAppLoading) setIsOpen(!isOpen)
         }}
         disabled={isAppLoading}
-        className="fixed left-4 top-4 z-40 p-2 rounded-lg bg-sidebar hover:bg-sidebar-accent disabled:cursor-wait lg:hidden"
+        className="fixed left-4 top-4 z-40 p-2 rounded-lg bg-sidebar hover:bg-sidebar-accent disabled:cursor-wait xl:hidden"
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 flex h-screen flex-col bg-sidebar border-r border-sidebar-border transition-[width] duration-300 ease-out z-50 lg:sticky lg:top-0 lg:z-auto
-          ${isOpen ? 'w-64 overflow-hidden' : 'w-0 overflow-hidden lg:w-20 lg:overflow-visible'}`}
+        className={`fixed left-0 top-0 flex h-screen flex-col bg-sidebar border-r border-sidebar-border transition-[width] duration-300 ease-out z-50 xl:sticky xl:top-0 xl:z-auto
+          ${isOpen ? 'w-64 overflow-hidden' : 'w-0 overflow-hidden xl:w-20 xl:overflow-visible'}`}
       >
         <div
           className="group/sidebar-logo border-b border-sidebar-border p-4"
@@ -202,7 +240,7 @@ export default function Sidebar() {
                 if (!isAppLoading) setIsOpen((open) => !open)
               }}
               disabled={isAppLoading}
-              className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground transition-opacity duration-200 hover:bg-sidebar-accent disabled:cursor-wait lg:inline-flex ${isCollapsed ? 'absolute left-1/2 -translate-x-1/2 opacity-0 group-hover/sidebar-logo:opacity-100 group-focus/sidebar-logo:opacity-100' : 'opacity-100'}`}
+              className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground transition-opacity duration-200 hover:bg-sidebar-accent disabled:cursor-wait xl:inline-flex ${isCollapsed ? 'absolute left-1/2 -translate-x-1/2 opacity-0 group-hover/sidebar-logo:opacity-100 group-focus/sidebar-logo:opacity-100' : 'opacity-100'}`}
               aria-label={withShortcut(t('toggleSidebar'), 'sidebar')}
               title={withShortcut(t('toggleSidebar'), 'sidebar')}
             >
@@ -230,9 +268,11 @@ export default function Sidebar() {
                     return
                   }
                   if (isActive) {
+                    closeResponsiveSidebar()
                     return
                   }
                   startRouteLoading()
+                  closeResponsiveSidebar()
                 }}
               >
                 <item.icon size={20} className={`shrink-0 transition-colors ${isActive ? 'text-sidebar-primary-foreground' : 'text-sidebar-foreground group-hover/nav-item:text-primary'}`} />
@@ -240,7 +280,7 @@ export default function Sidebar() {
                   <span>{item.label}</span>
                 </span>
                 {isCollapsed && (
-                  <span className="pointer-events-none absolute left-full top-1/2 z-[70] ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-3 py-1.5 text-xs font-medium text-popover-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover/nav-item:opacity-100 group-focus-visible/nav-item:opacity-100 lg:block">
+                  <span className="pointer-events-none absolute left-full top-1/2 z-[70] ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-3 py-1.5 text-xs font-medium text-popover-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover/nav-item:opacity-100 group-focus-visible/nav-item:opacity-100 xl:block">
                     <span>{item.label}</span>
                     {shortcutText(item.shortcut) && <span className="ml-2 text-muted-foreground">{shortcutText(item.shortcut)}</span>}
                   </span>
@@ -336,9 +376,11 @@ export default function Sidebar() {
                 return
               }
               if (pathname.startsWith('/profile')) {
+                closeResponsiveSidebar()
                 return
               }
               startRouteLoading()
+              closeResponsiveSidebar()
             }}
           >
             <Button
@@ -353,7 +395,7 @@ export default function Sidebar() {
               </span>
             </Button>
             {isCollapsed && (
-              <span className="pointer-events-none absolute left-full top-1/2 z-[70] ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-3 py-1.5 text-xs font-medium text-popover-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover/profile:opacity-100 group-focus-within/profile:opacity-100 lg:block">
+              <span className="pointer-events-none absolute left-full top-1/2 z-[70] ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-3 py-1.5 text-xs font-medium text-popover-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover/profile:opacity-100 group-focus-within/profile:opacity-100 xl:block">
                 <span>{t('profile')}</span>
                 <span className="ml-2 text-muted-foreground">{formatShortcut('profile')}</span>
               </span>
@@ -373,7 +415,7 @@ export default function Sidebar() {
               <span>{t('logout')}</span>
             </span>
             {isCollapsed && (
-              <span className="pointer-events-none absolute left-full top-1/2 z-[70] ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-3 py-1.5 text-xs font-medium text-popover-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover/logout:opacity-100 group-focus-visible/logout:opacity-100 lg:block">
+              <span className="pointer-events-none absolute left-full top-1/2 z-[70] ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-3 py-1.5 text-xs font-medium text-popover-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover/logout:opacity-100 group-focus-visible/logout:opacity-100 xl:block">
                 <span>{t('logout')}</span>
                 <span className="ml-2 text-muted-foreground">{formatShortcut('logout')}</span>
               </span>
@@ -388,7 +430,7 @@ export default function Sidebar() {
           onClick={() => {
             if (!isAppLoading) setIsOpen(false)
           }}
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 xl:hidden"
         />
       )}
       {isLoggingOut && (
@@ -396,7 +438,7 @@ export default function Sidebar() {
           <div className="text-center">
             <AuditFlowLogo collapsed className="mx-auto mb-4 animate-pulse justify-center" imageClassName="h-16 w-16 rounded-2xl" />
             <p className="text-sm uppercase tracking-widest text-muted-foreground">{t('loggingOut')}</p>
-            <h2 className="mt-2 text-2xl font-bold text-foreground">Audit Coflow</h2>
+            <h2 className="mt-2 text-2xl font-bold text-foreground">Audit Co-Flow</h2>
           </div>
         </div>
       )}

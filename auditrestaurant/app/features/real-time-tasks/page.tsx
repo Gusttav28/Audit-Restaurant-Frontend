@@ -1,5 +1,5 @@
 import { FeatureDetailPage } from "../feature-detail-content"
 
-export default function HistoryFeaturePage() {
+export default function RealTimeTasksFeaturePage() {
   return <FeatureDetailPage featureKey="real-time-tasks" />
 }

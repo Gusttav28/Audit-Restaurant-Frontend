@@ -751,9 +751,9 @@ export default function ReportsPage() {
         </main>
       </div>
       {isExportOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setIsExportOpen(false)}>
-          <div className="w-full max-w-3xl rounded-lg border border-border bg-card" onClick={(event) => event.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-border p-6">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-2 sm:p-4" onClick={() => setIsExportOpen(false)}>
+          <div className="flex w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-lg border border-border bg-card sm:w-[calc(100vw-2rem)] sm:max-h-[calc(100dvh-2rem)] md:max-w-3xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex shrink-0 items-center justify-between border-b border-border p-4 sm:p-6">
               <div>
                 <h2 className="text-xl font-bold text-foreground">{t('reportSummary')}</h2>
                 <p className="text-sm text-muted-foreground">{selectedRestaurant.name}</p>
@@ -762,7 +762,7 @@ export default function ReportsPage() {
                 <X size={22} />
               </button>
             </div>
-            <div className="space-y-6 p-6">
+            <div className="auditflow-thin-scrollbar flex-1 space-y-5 overflow-y-auto p-4 sm:space-y-6 sm:p-6">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-lg border border-border bg-secondary/20 p-4">
                   <p className="text-xs text-muted-foreground">{t('inventoryValue')}</p>
@@ -799,7 +799,7 @@ export default function ReportsPage() {
                   {t('mermaQuantity')}: <span className="font-semibold text-foreground">{completedAuditMermaQuantity}</span> · {t('productionQuantity')}: <span className="font-semibold text-foreground">{completedAuditProductionQuantity}</span>
                 </p>
               </div>
-              <div className="flex justify-end gap-3 border-t border-border pt-4">
+              <div className="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:justify-end">
                 <Button variant="outline" className="bg-transparent" onClick={() => setIsExportOpen(false)}>
                   {t('cancel')}
                 </Button>

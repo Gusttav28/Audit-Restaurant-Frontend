@@ -1,6 +1,10 @@
 "use client"
 
 import Image from "next/image"
+import { useTheme } from "next-themes"
+
+const DARK_BLUE_LOGO_FOR_LIGHT_MODE = "/audit-coflow-logo-dark.jpg"
+const WHITE_LOGO_FOR_DARK_MODE = "/audit-coflow-logo-light.jpg"
 
 interface AuditFlowLogoProps {
   collapsed?: boolean
@@ -15,27 +19,23 @@ export default function AuditFlowLogo({
   imageClassName = "h-9 w-9 rounded-lg",
   textClassName = "text-sidebar-foreground",
 }: AuditFlowLogoProps) {
+  const { resolvedTheme, theme } = useTheme()
+  const activeTheme = resolvedTheme ?? theme
+  const logoSrc = activeTheme === "dark" ? WHITE_LOGO_FOR_DARK_MODE : DARK_BLUE_LOGO_FOR_LIGHT_MODE
+
   return (
     <div className={`flex min-w-0 items-center gap-2 ${className}`}>
       <Image
-        src="/audit-coflow-logo-dark.jpg"
-        alt="Audit Coflow"
+        src={logoSrc}
+        alt="Audit Co-Flow"
         width={92}
         height={92}
         priority
-        className={`hidden shrink-0 object-cover shadow-sm dark:block ${imageClassName}`}
-      />
-      <Image
-        src="/audit-coflow-logo-light.jpg"
-        alt="Audit Coflow"
-        width={92}
-        height={92}
-        priority
-        className={`shrink-0 object-cover shadow-sm dark:hidden ${imageClassName}`}
+        className={`shrink-0 object-cover shadow-sm ${imageClassName}`}
       />
       {!collapsed && (
         <div className="min-w-0">
-          <h1 className={`truncate text-xl font-bold ${textClassName}`}>Audit Coflow</h1>
+          <h1 className={`truncate text-xl font-bold ${textClassName}`}>Audit Co-Flow</h1>
         </div>
       )}
     </div>

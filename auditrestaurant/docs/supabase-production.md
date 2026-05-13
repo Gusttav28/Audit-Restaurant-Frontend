@@ -44,7 +44,7 @@ Auth users should be created through the app signup page or Supabase Dashboard A
 After creating the initial admin user, run:
 
 ```txt
-supabase/seed-delirio.example.sql
+supabase/seed-goflow.example.sql
 ```
 
 Before running it, replace:
@@ -57,9 +57,9 @@ with the admin user's email.
 
 The seed creates:
 
-- Restaurant: Delirio
+- Restaurant: GoFlow Restaurant
 - Country: Costa Rica
-- Address/location: Barrio Escalante
+- Address/location: GoFlow Demo District
 - Default currency: CRC
 - Admin membership role: owner
 - Initial inventories: Kitchen and Bar

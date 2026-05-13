@@ -13,6 +13,7 @@ import {
   ClipboardCheck,
   Database,
   FileText,
+  Globe2,
   History,
   LockKeyhole,
   Menu,
@@ -33,23 +34,39 @@ import { isMacPlatform, shouldIgnoreShortcut, withShortcut } from "@/components/
 const productModules = [
   {
     icon: Database,
-    title: "Restaurant inventory",
+    title: "Inventory Database",
     description: "Every location keeps its own items, suppliers, units, phases, and stock history.",
+    href: "/features/inventory-database",
   },
   {
     icon: ClipboardCheck,
-    title: "Inventory audits",
+    title: "Audit Functions",
     description: "Assign counts, capture current stock, resolve discrepancies, and complete audit reports.",
+    href: "/features/audit-functions",
   },
   {
     icon: LockKeyhole,
-    title: "Role-based access",
+    title: "Authentication",
     description: "Give admins, auditors, and collaborators exactly the access they need per restaurant.",
+    href: "/features/authentication",
   },
   {
     icon: BarChart3,
-    title: "Operational analytics",
+    title: "Analytics API",
     description: "Track audit trends, issue severity, inventory value, and completed work by restaurant.",
+    href: "/features/analytics-api",
+  },
+  {
+    icon: FileText,
+    title: "Reports",
+    description: "Review audit results, track issue trends, and export business-ready inventory insights.",
+    href: "/features/reports",
+  },
+  {
+    icon: Globe2,
+    title: "Remote Access",
+    description: "Manage audits and inventory from any restaurant or location your account can access.",
+    href: "/features/remote-access",
   },
 ]
 
@@ -65,10 +82,11 @@ const capabilities = [
 const platformTiles = [
   {
     icon: Database,
-    title: "Inventory database",
+    title: "Inventory Database",
     copy: "Portable restaurant data for products, units, suppliers, categories, and stock snapshots.",
     bullets: ["Restaurant scoped", "Stock history", "Supplier records"],
     accent: "primary",
+    href: "/features/inventory-database",
   },
   {
     icon: LockKeyhole,
@@ -76,34 +94,55 @@ const platformTiles = [
     copy: "Sign in users, assign restaurants, and keep permissions per location.",
     bullets: ["Owner access", "Read + Audit", "Multi-location"],
     accent: "accent",
+    href: "/features/authentication",
   },
   {
     icon: Workflow,
-    title: "Audit functions",
+    title: "Audit Functions",
     copy: "Create audit tasks, save rows, complete counts, and update inventory quantities.",
     bullets: ["Row saves", "Save all", "Exports"],
     accent: "primary",
+    href: "/features/audit-functions",
   },
   {
-    icon: Package,
-    title: "Storage areas",
-    copy: "Organize kitchen, bar, production, merma, and custom inventories.",
-    bullets: ["Bar", "Kitchen", "Custom types"],
+    icon: Shield,
+    title: "Authorized Area",
+    copy: "Protect dashboard routes, restaurant data, settings, and actions by user permissions.",
+    bullets: ["Protected routes", "User restrictions", "Team access"],
     accent: "accent",
+    href: "/features/authorized-area",
   },
   {
     icon: Bell,
-    title: "Realtime tasks",
+    title: "Real-Time Tasks",
     copy: "Assigned audit work appears as actionable notifications for the right user.",
     bullets: ["Due dates", "Helpers", "Status"],
     accent: "primary",
+    href: "/features/real-time-tasks",
   },
   {
     icon: BarChart3,
-    title: "Analytics APIs",
+    title: "Analytics API",
     copy: "Turn completed audits into issue, value, discrepancy, and trend reports.",
     bullets: ["Metrics", "Charts", "CSV / PDF"],
     accent: "accent",
+    href: "/features/analytics-api",
+  },
+  {
+    icon: FileText,
+    title: "Reports",
+    copy: "Review audit results, issue trends, inventory performance, and export business summaries.",
+    bullets: ["Audit results", "Trends", "Exports"],
+    accent: "primary",
+    href: "/features/reports",
+  },
+  {
+    icon: Globe2,
+    title: "Remote Access",
+    copy: "Work from assigned restaurants and locations while preserving account permissions.",
+    bullets: ["Anywhere access", "Scoped data", "Mobile ready"],
+    accent: "accent",
+    href: "/features/remote-access",
   },
 ]
 
@@ -268,10 +307,10 @@ export default function LandingPage() {
 
             <div className="mx-auto max-w-4xl text-center">
               <h1 className="text-balance text-5xl font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-                Run every restaurant audit from one source of truth
+                Run every inventory audit from one source of truth
               </h1>
               <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground sm:text-xl">
-                Audit Coflow connects restaurants, inventories, team permissions, and audit history into a fast operational workspace for modern hospitality teams.
+                Audit Co-Flow connects restaurants, inventories, team permissions, and audit history into a fast operational workspace for modern hospitality teams.
               </p>
               <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link href={appHref}>
@@ -293,13 +332,12 @@ export default function LandingPage() {
                 const Icon = tile.icon
                 const isActive = activeTile === index
                 return (
-                  <button
+                  <Link
                     key={tile.title}
-                    type="button"
+                    href={tile.href}
                     onMouseEnter={() => setActiveTile(index)}
                     onFocus={() => setActiveTile(index)}
-                    onClick={() => setActiveTile(index)}
-                    className={`group relative min-h-72 overflow-hidden rounded-2xl border bg-card p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 ${
+                    className={`group relative min-h-72 cursor-pointer overflow-hidden rounded-2xl border bg-card p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                       index === 0 ? "lg:col-span-2 lg:row-span-2" : ""
                     } ${isActive ? "border-primary/50" : "border-border"}`}
                   >
@@ -330,7 +368,7 @@ export default function LandingPage() {
                     )}
                     {index === 1 && (
                       <div className="absolute inset-x-0 bottom-0 grid grid-cols-2 gap-3 border-t border-border p-4 opacity-50 transition-opacity group-hover:opacity-90">
-                        {["admin@coflow.io", "carlos@bar.io", "••••••••", "assigned"].map((cell) => (
+                        {["owner@goflow.example", "audit@goflow.example", "••••••••", "assigned"].map((cell) => (
                           <span key={cell} className="truncate rounded-lg border border-border bg-background/60 px-3 py-3 font-mono text-xs text-muted-foreground">{cell}</span>
                         ))}
                       </div>
@@ -354,7 +392,7 @@ export default function LandingPage() {
                     {index === 4 && (
                       <div className="absolute bottom-6 left-6 right-6 h-32 rounded-lg border border-border bg-[linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:20px_20px] opacity-70">
                         <div className="absolute bottom-7 left-20 rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground">Audit ready</div>
-                        <div className="absolute right-7 top-7 rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground">Carlos</div>
+                        <div className="absolute right-7 top-7 rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground">Audit User</div>
                       </div>
                     )}
                     {index === 5 && (
@@ -367,7 +405,7 @@ export default function LandingPage() {
                         ))}
                       </div>
                     )}
-                  </button>
+                  </Link>
                 )
               })}
             </div>
@@ -378,8 +416,8 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl">
             <p className="mb-6 text-center text-sm text-muted-foreground">Built for restaurant groups, bars, kitchens, and audit teams</p>
             <div className="grid grid-cols-2 gap-3 text-center text-sm font-medium text-muted-foreground sm:grid-cols-4 lg:grid-cols-6">
-              {["Delirio", "Bar Lab", "Central Kitchen", "Escalante Group", "Stock Room", "Audit Ops"].map((name) => (
-                <div key={name} className="rounded-lg border border-border bg-background/40 px-4 py-3">{name}</div>
+              {["GoFlow Restaurant", "GoFlow Bar Template", "GoFlow Kitchen Template", "GoFlow Group", "GoFlow Stock Room", "GoFlow Audit Ops"].map((name) => (
+                <div key={name} className="cursor-default rounded-lg border border-border bg-background/40 px-4 py-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:text-foreground">{name}</div>
               ))}
             </div>
           </div>
@@ -395,13 +433,17 @@ export default function LandingPage() {
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {productModules.map((module) => (
-                <div key={module.title} className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40">
+                <Link key={module.title} href={module.href} className="group rounded-xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                   <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-                    <module.icon size={20} className="text-primary" />
+                    <module.icon size={20} className="text-primary transition-transform group-hover:scale-110" />
                   </div>
                   <h3 className="text-base font-semibold text-foreground">{module.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{module.description}</p>
-                </div>
+                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                    Learn more
+                    <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Link>
               ))}
             </div>
           </div>
@@ -415,11 +457,11 @@ export default function LandingPage() {
                 Create, assign, audit, export, and update stock without leaving the flow.
               </h2>
               <p className="mt-5 text-muted-foreground">
-                Audit Coflow keeps live restaurant context, permissions, audit tasks, and inventory updates connected through Supabase.
+                Audit Co-Flow keeps live restaurant context, permissions, audit tasks, and inventory updates connected through Supabase.
               </p>
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 {capabilities.map((capability) => (
-                  <div key={capability} className="flex items-center gap-2 text-sm text-foreground">
+                  <div key={capability} className="flex cursor-default items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm text-foreground transition-colors hover:border-primary/30 hover:bg-primary/5">
                     <Check size={16} className="text-primary" />
                     {capability}
                   </div>
@@ -445,7 +487,7 @@ export default function LandingPage() {
                         <Building2 size={17} className="text-accent" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-foreground">Delirio</p>
+                        <p className="text-sm font-medium text-foreground">GoFlow Restaurant</p>
                         <p className="text-xs text-muted-foreground">Bar · Audit</p>
                       </div>
                     </div>
@@ -482,11 +524,11 @@ export default function LandingPage() {
                     </div>
                     <div className="grid gap-4 md:grid-cols-3">
                       {[
-                        ["Restaurant", "Delirio", "Costa Rica · CRC"],
+                        ["Restaurant", "GoFlow Restaurant", "Costa Rica · CRC"],
                         ["Inventory", workflowStep === 0 ? "Choose Bar" : "Bar", workflowStep === 2 ? "Stock updated" : "15 products"],
-                        ["Responsible", workflowStep === 0 ? "Assign Carlos" : "Carlos", workflowStep === 2 ? "Completed" : "In progress"],
+                        ["Responsible", workflowStep === 0 ? "Assign Audit User" : "Audit User", workflowStep === 2 ? "Completed" : "In progress"],
                       ].map(([label, value, hint]) => (
-                        <div key={label} className="rounded-lg border border-border bg-background/60 p-4">
+                        <div key={label} className="cursor-default rounded-lg border border-border bg-background/60 p-4 transition-colors hover:border-primary/40 hover:bg-primary/5">
                           <p className="text-xs text-muted-foreground">{label}</p>
                           <p className="mt-2 text-lg font-semibold text-foreground">{value}</p>
                           <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
@@ -542,7 +584,7 @@ export default function LandingPage() {
             </div>
             <div className="grid gap-5 lg:grid-cols-3">
               {plans.map((plan) => (
-                <div key={plan.name} className={`relative rounded-xl border bg-card p-7 ${plan.popular ? "border-primary shadow-lg shadow-primary/10" : "border-border"}`}>
+                <div key={plan.name} className={`relative rounded-xl border bg-card p-7 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 ${plan.popular ? "border-primary shadow-lg shadow-primary/10" : "border-border hover:border-primary/40"}`}>
                   {plan.popular && (
                     <span className="absolute right-5 top-5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Recommended</span>
                   )}
@@ -572,11 +614,11 @@ export default function LandingPage() {
         </section>
 
         <section className="px-4 pb-24 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-4xl rounded-2xl border border-border bg-card p-8 text-center sm:p-12">
+          <div className="mx-auto max-w-4xl rounded-2xl border border-border bg-card p-8 text-center transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 sm:p-12">
             <Shield size={28} className="mx-auto text-primary" />
             <h2 className="mt-5 text-3xl font-semibold tracking-tight text-foreground">Ready to make every count traceable?</h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              Create an Audit Coflow workspace and give your restaurant team a cleaner way to manage inventory, audits, and accountability.
+              Create an Audit Co-Flow workspace and give your restaurant team a cleaner way to manage inventory, audits, and accountability.
             </p>
             <Link href={appHref} className="mt-8 inline-flex">
               <Button size="lg" className="gap-2 bg-foreground text-background hover:bg-foreground/90">
@@ -598,7 +640,7 @@ export default function LandingPage() {
             <a href="#platform" className="hover:text-foreground">Platform</a>
             <a href="#pricing" className="hover:text-foreground">Pricing</a>
           </div>
-          <p className="text-sm text-muted-foreground">2026 Audit Coflow. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">2026 Audit Co-Flow. All rights reserved.</p>
         </div>
       </footer>
     </div>
