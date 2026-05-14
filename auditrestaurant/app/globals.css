@@ -214,6 +214,106 @@
     background: transparent;
   }
 
+  .auditflow-feature-video {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .auditflow-feature-video::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(110deg, transparent 0%, color-mix(in oklch, var(--primary) 16%, transparent) 42%, transparent 68%);
+    opacity: 0.45;
+    transform: translateX(-120%);
+    animation: auditflow-video-sweep 5.5s ease-in-out infinite;
+  }
+
+  .auditflow-video-pulse {
+    animation: auditflow-video-pulse 2.8s ease-in-out infinite;
+  }
+
+  .auditflow-video-row {
+    animation: auditflow-video-row 4.5s ease-in-out infinite;
+  }
+
+  .auditflow-video-row-delay-1 {
+    animation-delay: 0.7s;
+  }
+
+  .auditflow-video-row-delay-2 {
+    animation-delay: 1.4s;
+  }
+
+  .auditflow-video-bar {
+    transform-origin: left;
+    animation: auditflow-video-bar 3.8s ease-in-out infinite;
+  }
+
+  .auditflow-video-marker {
+    animation: auditflow-video-marker 2.4s ease-in-out infinite;
+  }
+
+  .auditflow-video-marker-delay-1 {
+    animation-delay: 0.45s;
+  }
+
+  .auditflow-video-marker-delay-2 {
+    animation-delay: 0.9s;
+  }
+
+  @keyframes auditflow-video-sweep {
+    0%, 28% {
+      transform: translateX(-120%);
+    }
+    56%, 100% {
+      transform: translateX(120%);
+    }
+  }
+
+  @keyframes auditflow-video-pulse {
+    0%, 100% {
+      border-color: var(--border);
+      box-shadow: none;
+      transform: translateY(0);
+    }
+    45% {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 45%, transparent), 0 12px 35px color-mix(in oklch, var(--primary) 18%, transparent);
+      transform: translateY(-2px);
+    }
+  }
+
+  @keyframes auditflow-video-row {
+    0%, 100% {
+      background: color-mix(in oklch, var(--background) 60%, transparent);
+    }
+    42% {
+      background: color-mix(in oklch, var(--primary) 13%, var(--background));
+    }
+  }
+
+  @keyframes auditflow-video-bar {
+    0%, 100% {
+      transform: scaleX(0.42);
+    }
+    50% {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes auditflow-video-marker {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 35%, transparent);
+    }
+    50% {
+      transform: scale(1.08);
+      box-shadow: 0 0 0 10px color-mix(in oklch, var(--primary) 0%, transparent);
+    }
+  }
+
   @media (max-width: 1279px) {
     input,
     select,

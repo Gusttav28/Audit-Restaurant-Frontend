@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type MouseEvent } from "react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import {
@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import AuditFlowLogo from "@/components/layout/audit-flow-logo"
+import { BlurFadeIn, TextBlurFadeIn } from "@/components/ui/text-blur-fade-in"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { isMacPlatform, shouldIgnoreShortcut, withShortcut } from "@/components/layout/shortcut-utils"
 
@@ -83,8 +84,8 @@ const platformTiles = [
   {
     icon: Database,
     title: "Inventory Database",
-    copy: "Portable restaurant data for products, units, suppliers, categories, and stock snapshots.",
-    bullets: ["Restaurant scoped", "Stock history", "Supplier records"],
+    copy: "Organize items by restaurant and inventory type, structure products with categories and units, track quantities and values, and let completed audits update current stock.",
+    bullets: ["Inventory type scoped", "Categories + units", "Quantity and value tracking", "Audit-updated stock"],
     accent: "primary",
     href: "/features/inventory-database",
   },
@@ -146,6 +147,18 @@ const platformTiles = [
   },
 ]
 
+const landingPlatformTiles = platformTiles.filter((tile) => tile.title !== "Analytics API")
+
+const previewHoverLabels: Record<string, string[]> = {
+  "Inventory Database": ["Stock updated", "Category tracked", "Inventory value"],
+  Authentication: ["Owner access", "Read + Audit", "Secure login"],
+  "Audit Functions": ["Stock checked", "Discrepancy found", "Audit completed"],
+  "Authorized Area": ["Access granted", "Permission checked", "Protected section"],
+  "Real-Time Tasks": ["Audit user", "Audit ready", "Audit progress"],
+  Reports: ["Metric updated", "Trend visible", "Export ready"],
+  "Remote Access": ["Remote session", "Restaurant selected", "Online access"],
+}
+
 const workflowSteps = [
   {
     title: "Create audit",
@@ -194,8 +207,29 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeTile, setActiveTile] = useState(0)
+  const [previewHover, setPreviewHover] = useState<{ title: string; label: string; x: number; y: number } | null>(null)
   const [workflowStep, setWorkflowStep] = useState(0)
   const isLightMode = theme === "light"
+  const handlePreviewMove = (title: string, event: MouseEvent<HTMLElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const labels = previewHoverLabels[title] ?? [title]
+    const labelIndex = Math.min(labels.length - 1, Math.max(0, Math.floor(((event.clientX - rect.left) / rect.width) * labels.length)))
+    setPreviewHover({
+      title,
+      label: labels[labelIndex],
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    })
+  }
+  const renderPreviewLabel = (title: string) =>
+    previewHover?.title === title ? (
+      <span
+        className="pointer-events-none absolute z-20 rounded-full border border-border bg-popover px-3 py-1 text-xs font-medium text-foreground shadow-lg shadow-black/15"
+        style={{ left: previewHover.x + 12, top: previewHover.y + 12 }}
+      >
+        {previewHover.label}
+      </span>
+    ) : null
 
   useEffect(() => {
     let mounted = true
@@ -306,13 +340,18 @@ export default function LandingPage() {
             </Link>
 
             <div className="mx-auto max-w-4xl text-center">
-              <h1 className="text-balance text-5xl font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-                Run every inventory audit from one source of truth
-              </h1>
-              <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground sm:text-xl">
-                Audit Co-Flow connects restaurants, inventories, team permissions, and audit history into a fast operational workspace for modern hospitality teams.
-              </p>
-              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <TextBlurFadeIn
+                as="h1"
+                text="Run every inventory audit from one source of truth"
+                className="text-balance text-5xl font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl"
+              />
+              <TextBlurFadeIn
+                text="Audit Co-Flow connects restaurants, inventories, team permissions, and audit history into a fast operational workspace for modern hospitality teams."
+                className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground sm:text-xl"
+                delay={0.22}
+                stagger={0.018}
+              />
+              <BlurFadeIn className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row" delay={0.55}>
                 <Link href={appHref}>
                   <Button size="lg" className="h-12 gap-2 bg-primary px-6 text-primary-foreground hover:bg-primary/90">
                     {appCta}
@@ -324,11 +363,11 @@ export default function LandingPage() {
                     See the workflow
                   </Button>
                 </Link>
-              </div>
+              </BlurFadeIn>
             </div>
 
-            <div className="mx-auto mt-16 grid max-w-7xl gap-4 lg:grid-cols-4">
-              {platformTiles.map((tile, index) => {
+            <div className="mx-auto mt-16 grid max-w-7xl gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {landingPlatformTiles.map((tile, index) => {
                 const Icon = tile.icon
                 const isActive = activeTile === index
                 return (
@@ -337,19 +376,20 @@ export default function LandingPage() {
                     href={tile.href}
                     onMouseEnter={() => setActiveTile(index)}
                     onFocus={() => setActiveTile(index)}
-                    className={`group relative min-h-72 cursor-pointer overflow-hidden rounded-2xl border bg-card p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                      index === 0 ? "lg:col-span-2 lg:row-span-2" : ""
-                    } ${isActive ? "border-primary/50" : "border-border"}`}
+                    className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${index === 0
+                      ? "min-h-[28rem] pb-44 md:col-span-2 lg:min-h-[28rem]"
+                      : "min-h-[24rem] pb-40 sm:min-h-[25rem] lg:min-h-[28rem]"
+                      } ${isActive ? "border-primary/50" : "border-border"}`}
                   >
-                    <div className="relative z-10">
-                      <div className="mb-8 flex items-center gap-3">
+                    <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+                      <div className="mb-7 flex items-center gap-3">
                         <Icon size={22} className={tile.accent === "accent" ? "text-accent" : "text-primary"} />
                         <h3 className="text-xl font-semibold text-foreground">{tile.title}</h3>
                       </div>
-                      <p className={`${index === 0 ? "max-w-sm text-lg leading-8" : "text-base leading-7"} text-muted-foreground`}>
+                      <p className={`${index === 0 ? "max-w-3xl text-base leading-7 sm:text-lg sm:leading-8" : "text-base leading-7"} text-muted-foreground`}>
                         {tile.copy}
                       </p>
-                      <div className={`mt-10 space-y-2 ${index === 0 ? "" : "text-sm"}`}>
+                      <div className={`space-y-2 ${index === 0 ? "mt-auto pt-6" : tile.title === "Authorized Area" ? "mt-6 text-sm" : "mt-9 text-sm"}`}>
                         {tile.bullets.map((bullet) => (
                           <div key={bullet} className="flex items-center gap-2 text-foreground">
                             <Check size={16} className={tile.accent === "accent" ? "text-accent" : "text-primary"} />
@@ -358,23 +398,38 @@ export default function LandingPage() {
                         ))}
                       </div>
                     </div>
-                    {index === 0 && (
-                      <div className="absolute bottom-8 right-8 hidden h-56 w-56 rounded-[3rem] border border-primary/25 bg-primary/5 lg:block">
+                    {tile.title === "Inventory Database" && (
+                      <div
+                        className="absolute bottom-24 right-8 hidden h-40 w-40 rounded-[2.25rem] border border-primary/35 bg-background/80 shadow-lg shadow-primary/10 transition-opacity group-hover:opacity-100 sm:block lg:bottom-20 lg:h-44 lg:w-44"
+                        onMouseMove={(event) => handlePreviewMove(tile.title, event)}
+                        onMouseLeave={() => setPreviewHover(null)}
+                      >
+                        {renderPreviewLabel(tile.title)}
                         <div className="absolute inset-5 rounded-[2.4rem] border border-accent/25" />
-                        <div className="absolute left-1/2 top-7 h-32 w-1 -translate-x-1/2 rounded-full bg-primary/50" />
-                        <div className="absolute bottom-12 left-12 h-20 w-32 rounded-full border-4 border-accent/40" />
-                        <div className="absolute right-11 top-16 h-6 w-6 rounded-full border border-primary/60" />
+                        <div className="absolute left-1/2 top-6 h-24 w-1 -translate-x-1/2 rounded-full bg-primary/50 lg:h-28" />
+                        <div className="absolute bottom-8 left-8 h-14 w-24 rounded-full border-4 border-accent/40 lg:h-16 lg:w-28" />
+                        <div className="absolute right-8 top-12 h-5 w-5 rounded-full border border-primary/60" />
                       </div>
                     )}
-                    {index === 1 && (
-                      <div className="absolute inset-x-0 bottom-0 grid grid-cols-2 gap-3 border-t border-border p-4 opacity-50 transition-opacity group-hover:opacity-90">
+                    {tile.title === "Authentication" && (
+                      <div
+                        className="absolute inset-x-0 bottom-0 grid grid-cols-2 gap-3 border-t border-border bg-background/35 p-4 opacity-70 transition-opacity group-hover:opacity-100"
+                        onMouseMove={(event) => handlePreviewMove(tile.title, event)}
+                        onMouseLeave={() => setPreviewHover(null)}
+                      >
+                        {renderPreviewLabel(tile.title)}
                         {["owner@goflow.example", "audit@goflow.example", "••••••••", "assigned"].map((cell) => (
-                          <span key={cell} className="truncate rounded-lg border border-border bg-background/60 px-3 py-3 font-mono text-xs text-muted-foreground">{cell}</span>
+                          <span key={cell} className="truncate rounded-lg border border-border bg-card/90 px-3 py-3 font-mono text-xs text-muted-foreground">{cell}</span>
                         ))}
                       </div>
                     )}
-                    {index === 2 && (
-                      <div className="absolute bottom-7 right-5 h-40 w-64 opacity-50 transition-opacity group-hover:opacity-90">
+                    {tile.title === "Audit Functions" && (
+                      <div
+                        className="absolute bottom-7 right-5 h-44 w-64 opacity-70 transition-opacity group-hover:opacity-100"
+                        onMouseMove={(event) => handlePreviewMove(tile.title, event)}
+                        onMouseLeave={() => setPreviewHover(null)}
+                      >
+                        {renderPreviewLabel(tile.title)}
                         <div className="absolute inset-0 rounded-full border border-primary/30" />
                         <div className="absolute inset-8 rounded-full border border-accent/30" />
                         <div className="absolute left-1/2 top-1/2 h-px w-28 origin-left rotate-45 bg-primary/60" />
@@ -382,25 +437,62 @@ export default function LandingPage() {
                         <div className="absolute right-10 bottom-8 h-2 w-2 rounded-full bg-accent" />
                       </div>
                     )}
-                    {index === 3 && (
-                      <div className="absolute bottom-6 left-6 right-6 grid grid-cols-3 gap-3 opacity-45 transition-opacity group-hover:opacity-90">
-                        {Array.from({ length: 6 }).map((_, itemIndex) => (
-                          <div key={itemIndex} className="aspect-square rounded-lg border border-border bg-background/60" />
-                        ))}
+                    {tile.title === "Authorized Area" && (
+                      <div
+                        className="absolute bottom-6 left-8 right-8 grid grid-cols-3 gap-3 opacity-70 transition-opacity group-hover:opacity-100"
+                        onMouseMove={(event) => handlePreviewMove(tile.title, event)}
+                        onMouseLeave={() => setPreviewHover(null)}
+                      >
+                        {renderPreviewLabel(tile.title)}
+                        {
+                          Array.from({ length: 6 }).map((_, itemIndex) => (
+                            <div key={itemIndex} className="h-10 rounded-lg border border-border bg-card/85 sm:h-20 lg:h-24" />
+                          ))
+                        }
                       </div>
                     )}
-                    {index === 4 && (
-                      <div className="absolute bottom-6 left-6 right-6 h-32 rounded-lg border border-border bg-[linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:20px_20px] opacity-70">
+                    {tile.title === "Real-Time Tasks" && (
+                      <div
+                        className="absolute bottom-6 left-6 right-6 h-36 rounded-lg border border-border bg-card/80 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:20px_20px] opacity-85 transition-opacity group-hover:opacity-100"
+                        onMouseMove={(event) => handlePreviewMove(tile.title, event)}
+                        onMouseLeave={() => setPreviewHover(null)}
+                      >
+                        {renderPreviewLabel(tile.title)}
                         <div className="absolute bottom-7 left-20 rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground">Audit ready</div>
                         <div className="absolute right-7 top-7 rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground">Audit User</div>
                       </div>
                     )}
-                    {index === 5 && (
-                      <div className="absolute bottom-6 left-6 right-6 space-y-3 opacity-55 transition-opacity group-hover:opacity-90">
-                        {["/v1/audits", "/v1/items", "/v1/reports"].map((endpoint) => (
-                          <div key={endpoint} className="flex items-center justify-between rounded-full border border-border bg-background/60 px-4 py-2 text-xs">
-                            <span className="text-muted-foreground">GET</span>
-                            <span className="font-mono text-foreground">{endpoint}</span>
+                    {tile.title === "Reports" && (
+                      <div
+                        className="absolute bottom-6 left-6 right-6 space-y-2 opacity-75 transition-opacity group-hover:opacity-100"
+                        onMouseMove={(event) => handlePreviewMove(tile.title, event)}
+                        onMouseLeave={() => setPreviewHover(null)}
+                      >
+                        {renderPreviewLabel(tile.title)}
+                        {["Inventory value", "Audit results", "Issue trend"].map((row, rowIndex) => (
+                          <div key={row} className="rounded-lg -mb-1 border border-border bg-card/90 p-2.5">
+                            <div className="mb-2 flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">{row}</span>
+                              <span className="font-mono text-foreground">{rowIndex === 0 ? "$8.4k" : rowIndex === 1 ? "18" : "+7%"}</span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+                              <div className="h-full rounded-full bg-primary" style={{ width: `${72 - rowIndex * 16}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {tile.title === "Remote Access" && (
+                      <div
+                        className="absolute bottom-6 left-6 right-6 space-y-3 opacity-75 transition-opacity group-hover:opacity-100"
+                        onMouseMove={(event) => handlePreviewMove(tile.title, event)}
+                        onMouseLeave={() => setPreviewHover(null)}
+                      >
+                        {renderPreviewLabel(tile.title)}
+                        {["GoFlow Restaurant", "GoFlow Bar Template", "GoFlow Kitchen Template"].map((location, locationIndex) => (
+                          <div key={location} className="flex items-center justify-between rounded-full border border-border bg-card/90 px-4 py-2 text-xs">
+                            <span className="truncate text-muted-foreground">{location}</span>
+                            <span className={locationIndex === 0 ? "text-primary" : "text-accent"}>{locationIndex === 0 ? "Owner" : locationIndex === 1 ? "Audit" : "Read"}</span>
                           </div>
                         ))}
                       </div>
@@ -408,17 +500,6 @@ export default function LandingPage() {
                   </Link>
                 )
               })}
-            </div>
-          </div>
-        </section>
-
-        <section className="border-y border-border bg-card/30 px-4 py-10 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <p className="mb-6 text-center text-sm text-muted-foreground">Built for restaurant groups, bars, kitchens, and audit teams</p>
-            <div className="grid grid-cols-2 gap-3 text-center text-sm font-medium text-muted-foreground sm:grid-cols-4 lg:grid-cols-6">
-              {["GoFlow Restaurant", "GoFlow Bar Template", "GoFlow Kitchen Template", "GoFlow Group", "GoFlow Stock Room", "GoFlow Audit Ops"].map((name) => (
-                <div key={name} className="cursor-default rounded-lg border border-border bg-background/40 px-4 py-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:text-foreground">{name}</div>
-              ))}
             </div>
           </div>
         </section>
@@ -496,9 +577,8 @@ export default function LandingPage() {
                         key={step.title}
                         type="button"
                         onClick={() => setWorkflowStep(index)}
-                        className={`mb-2 w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                          workflowStep === index ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                        }`}
+                        className={`mb-2 w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${workflowStep === index ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                          }`}
                       >
                         {step.title}
                       </button>
@@ -559,11 +639,10 @@ export default function LandingPage() {
                           key={step.title}
                           type="button"
                           onClick={() => setWorkflowStep(index)}
-                          className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                            workflowStep === index
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-background text-muted-foreground hover:text-foreground"
-                          }`}
+                          className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${workflowStep === index
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-muted-foreground hover:text-foreground"
+                            }`}
                         >
                           {step.title}
                         </button>
