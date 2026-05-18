@@ -1,13 +1,23 @@
 "use client"
 
 import { useState } from "react"
-import dynamic from "next/dynamic"
 import type { FeatureKey } from "./feature-detail-content"
+import WorldMap from "@/components/ui/world-map"
 
-const RemoteAccessGlobe = dynamic(() => import("./remote-access-globe"), {
-  ssr: false,
-  loading: () => <div className="h-full w-full animate-pulse rounded-xl bg-primary/10" />,
-})
+const remoteAccessDots = [
+  {
+    start: { lat: 9.93, lng: -84.08, label: "AuditNett" },
+    end: { lat: 25.76, lng: -80.19, label: "Maya Chen" },
+  },
+  {
+    start: { lat: 9.93, lng: -84.08, label: "AuditNett" },
+    end: { lat: 40.42, lng: -3.7, label: "Gustavo Camacho" },
+  },
+  {
+    start: { lat: 9.93, lng: -84.08, label: "AuditNett" },
+    end: { lat: 51.51, lng: -0.13, label: "Aisha Patel" },
+  },
+]
 
 const stepsByFeature: Record<FeatureKey, string[]> = {
   "inventory-database": ["Restaurant", "Inventory table", "Audit count"],
@@ -17,7 +27,7 @@ const stepsByFeature: Record<FeatureKey, string[]> = {
   "real-time-tasks": ["Assign", "Notify", "Complete"],
   "analytics-api": ["Metrics", "Chart", "Export"],
   reports: ["Metrics", "Chart", "Export"],
-  "remote-access": ["HQ", "Bar", "Kitchen"],
+  "remote-access": ["Maya", "Gustavo", "Aisha"],
 }
 
 function StepControls({ steps, activeStep, setActiveStep }: { steps: string[]; activeStep: number; setActiveStep: (step: number) => void }) {
@@ -28,11 +38,10 @@ function StepControls({ steps, activeStep, setActiveStep }: { steps: string[]; a
           key={step}
           type="button"
           onClick={() => setActiveStep(index)}
-          className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-            activeStep === index
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
-          }`}
+          className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${activeStep === index
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"
+            }`}
         >
           {step}
         </button>
@@ -242,17 +251,21 @@ export default function InteractiveFeaturePreview({ featureKey }: { featureKey: 
         <span className="auditflow-video-pulse rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">{steps[activeStep]} online</span>
       </div>
       <div className="relative flex h-72 items-center justify-center overflow-hidden rounded-xl border border-border bg-background/70">
-        <div className="absolute aspect-square h-[115%] max-h-[22rem] max-w-[22rem] opacity-95">
-          <RemoteAccessGlobe />
+        <div className="absolute inset-x-2 top-9 sm:inset-x-5 sm:top-7">
+          <WorldMap dots={remoteAccessDots} lineColor="#0f6cb4" className="opacity-95" />
         </div>
         {[
-          { label: "HQ", style: { left: "4rem", top: "8rem" } },
-          { label: "Bar", style: { left: "13rem", top: "5rem" } },
-          { label: "Kitchen", style: { right: "4rem", bottom: "4rem" } },
+          { name: "Maya Chen", task: "Bar audit", style: { left: "8%", top: "48%" }, line: "left-1/2 top-full h-8 -rotate-[18deg]" },
+          { name: "Gustavo Camacho", task: "Kitchen inventory", style: { left: "34%", top: "34%" }, line: "left-1/2 top-full h-7 rotate-[20deg]" },
+          { name: "Aisha Patel", task: "Storage count", style: { right: "7%", bottom: "18%" }, line: "left-1/2 bottom-full h-8 rotate-[34deg]" },
         ].map((location, index) => (
-          <button key={location.label} type="button" onClick={() => setActiveStep(index)} style={location.style} className={`auditflow-video-marker absolute z-10 flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors ${activeStep === index ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground hover:border-primary/40"}`}>
+          <button key={location.name} type="button" onClick={() => setActiveStep(index)} style={location.style} className={`auditflow-video-marker absolute z-10 flex items-center gap-2 rounded-2xl border px-3 py-2 text-left text-xs transition-colors ${activeStep === index ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground hover:border-primary/40"}`}>
+            <span className={`pointer-events-none absolute w-px origin-top rounded-full ${activeStep === index ? "bg-primary" : "bg-primary/45"} ${location.line}`} />
             <span className={`h-2 w-2 rounded-full ${activeStep === index ? "bg-primary-foreground" : "bg-primary"}`} />
-            {location.label}
+            <span className="leading-tight">
+              <span className="block font-medium">{location.name}</span>
+              <span className={`block text-[11px] ${activeStep === index ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{location.task}</span>
+            </span>
           </button>
         ))}
       </div>

@@ -7,69 +7,41 @@ import {
   ArrowRight,
   BarChart3,
   Bell,
+  Briefcase,
+  Building,
   Building2,
   Check,
+  ChevronDown,
   ChevronRight,
   ClipboardCheck,
   Database,
   FileText,
+  GitFork,
   Globe2,
-  History,
   LockKeyhole,
+  MapPinned,
   Menu,
   Moon,
   Package,
+  Rocket,
   Shield,
   Sparkles,
+  Store,
   Sun,
-  Users,
+  TrendingUp,
+  User,
+  UsersRound,
   Workflow,
+  CreditCard,
+  HelpCircle,
   X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { BlurFadeIn, TextBlurFadeIn } from "@/components/ui/text-blur-fade-in"
+import WorldMap from "@/components/ui/world-map"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { isMacPlatform, shouldIgnoreShortcut, withShortcut } from "@/components/layout/shortcut-utils"
-
-const productModules = [
-  {
-    icon: Database,
-    title: "Inventory Database",
-    description: "Every location keeps its own items, suppliers, units, phases, and stock history.",
-    href: "/features/inventory-database",
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Audit Functions",
-    description: "Assign counts, capture current stock, resolve discrepancies, and complete audit reports.",
-    href: "/features/audit-functions",
-  },
-  {
-    icon: LockKeyhole,
-    title: "Authentication",
-    description: "Give admins, auditors, and collaborators exactly the access they need per restaurant.",
-    href: "/features/authentication",
-  },
-  {
-    icon: BarChart3,
-    title: "Analytics API",
-    description: "Track audit trends, issue severity, inventory value, and completed work by restaurant.",
-    href: "/features/analytics-api",
-  },
-  {
-    icon: FileText,
-    title: "Reports",
-    description: "Review audit results, track issue trends, and export business-ready inventory insights.",
-    href: "/features/reports",
-  },
-  {
-    icon: Globe2,
-    title: "Remote Access",
-    description: "Manage audits and inventory from any restaurant or location your account can access.",
-    href: "/features/remote-access",
-  },
-]
 
 const capabilities = [
   "Multi-restaurant switching",
@@ -149,6 +121,61 @@ const platformTiles = [
 
 const landingPlatformTiles = platformTiles.filter((tile) => tile.title !== "Analytics API")
 
+const platformDropdownFeatures = [
+  {
+    icon: Database,
+    title: "Inventory Database",
+    href: "/features/inventory-database",
+  },
+  {
+    icon: Workflow,
+    title: "Audit Functions",
+    href: "/features/audit-functions",
+  },
+  {
+    icon: Bell,
+    title: "Real-Time Tasks",
+    href: "/features/real-time-tasks",
+  },
+  {
+    icon: BarChart3,
+    title: "Analytics and Reports",
+    href: "/features/reports",
+  },
+]
+
+const workflowDropdownItems = [
+  { icon: Database, title: "Create Inventory", href: "/features/inventory-database" },
+  { icon: Workflow, title: "Run Audit", href: "/features/audit-functions" },
+  { icon: FileText, title: "Review Reports", href: "/features/reports" },
+  { icon: Bell, title: "Assign Tasks", href: "/features/real-time-tasks" },
+  { icon: ClipboardCheck, title: "Complete Audit", href: "/features/audit-functions" },
+]
+
+const pricingDropdownItems = [
+  { icon: Package, title: "Plans", href: "/subscription" },
+  { icon: Check, title: "Compare Features", href: "/#features" },
+  { icon: CreditCard, title: "Subscription", href: "/subscription" },
+  { icon: HelpCircle, title: "FAQ", href: "/docs" },
+]
+
+const solutionDropdownColumns = [
+  [
+    { icon: User, title: "Individuals", href: "/solutions/individuals" },
+    { icon: Briefcase, title: "Entrepreneurs", href: "/solutions/entrepreneurs" },
+    { icon: Store, title: "Small Restaurants", href: "/solutions/small-restaurants" },
+    { icon: Building2, title: "Restaurant Groups", href: "/solutions/restaurant-groups" },
+    { icon: Rocket, title: "Startups", href: "/solutions/startups" },
+  ],
+  [
+    { icon: TrendingUp, title: "Growing Businesses", href: "/solutions/growing-businesses" },
+    { icon: Building, title: "Large Companies", href: "/solutions/large-companies" },
+    { icon: GitFork, title: "Franchises", href: "/solutions/franchises" },
+    { icon: MapPinned, title: "Remote Teams", href: "/solutions/remote-teams" },
+    { icon: UsersRound, title: "Operations Teams", href: "/solutions/operations-teams" },
+  ],
+]
+
 const previewHoverLabels: Record<string, string[]> = {
   "Inventory Database": ["Stock updated", "Category tracked", "Inventory value"],
   Authentication: ["Owner access", "Read + Audit", "Secure login"],
@@ -158,6 +185,17 @@ const previewHoverLabels: Record<string, string[]> = {
   Reports: ["Metric updated", "Trend visible", "Export ready"],
   "Remote Access": ["Remote session", "Restaurant selected", "Online access"],
 }
+
+const remoteAccessDots = [
+  {
+    start: { lat: 9.93, lng: -84.08, label: "AuditNett" },
+    end: { lat: 25.76, lng: -80.19, label: "Maya Chen" },
+  },
+  {
+    start: { lat: 9.93, lng: -84.08, label: "AuditNett" },
+    end: { lat: 40.42, lng: -3.7, label: "Gustavo Camacho" },
+  },
+]
 
 const workflowSteps = [
   {
@@ -177,28 +215,6 @@ const workflowSteps = [
     eyebrow: "Step 03",
     description: "The completed audit exports to CSV/PDF and becomes the inventory’s new stock snapshot.",
     metric: "100%",
-  },
-]
-
-const plans = [
-  {
-    name: "Launch",
-    price: "$0",
-    description: "For a single restaurant validating the flow.",
-    features: ["2 inventory areas", "50 products", "30-day audit history", "Basic reports"],
-  },
-  {
-    name: "Operate",
-    price: "$29",
-    description: "For teams running daily inventory controls.",
-    features: ["Unlimited inventory areas", "Team permissions", "Audit assignments", "Advanced reports"],
-    popular: true,
-  },
-  {
-    name: "Scale",
-    price: "$99",
-    description: "For groups managing multiple restaurants.",
-    features: ["Multi-location access", "Unlimited members", "Full audit history", "Priority support"],
   },
 ]
 
@@ -263,20 +279,152 @@ export default function LandingPage() {
 
   const appHref = isLoggedIn ? "/dashboard" : "/signup"
   const appCta = isLoggedIn ? "Open dashboard" : "Start your workspace"
+  const rememberFeatureReturn = () => {
+    window.sessionStorage.setItem("auditnett-return-section", "features")
+  }
 
   return (
     <div className="min-h-screen overflow-hidden bg-background text-foreground">
       <nav className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <AuditFlowLogo imageClassName="h-8 w-8 rounded-md" textClassName="text-foreground" />
-          </Link>
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-7">
+            <Link href="/" className="flex shrink-0 items-center gap-2">
+              <AuditFlowLogo imageClassName="h-8 w-8 rounded-md" textClassName="text-foreground" />
+            </Link>
 
-          <div className="hidden items-center gap-7 md:flex">
-            <a href="#platform" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Platform</a>
-            <a href="#workflow" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Workflow</a>
-            <a href="#pricing" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Pricing</a>
-            <Link href="/docs" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Docs</Link>
+            <div className="hidden items-center gap-1 lg:flex">
+              <div className="group relative">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:bg-accent group-hover:text-white"
+                >
+                  Platform
+                  <ChevronDown size={14} className="transition-transform group-hover:rotate-180" />
+                </button>
+                <div className="invisible absolute left-0 top-full z-50 w-[38rem] max-w-[calc(100vw-2rem)] translate-y-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-2 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-2 group-focus-within:opacity-100">
+                  <div className="grid gap-2 rounded-2xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl shadow-black/20 sm:grid-cols-2">
+                    <div>
+                      <p className="px-3 pb-2 pt-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Platform</p>
+                      {platformDropdownFeatures.map((item) => {
+                        const Icon = item.icon
+                        return (
+                          <Link
+                            key={`platform-${item.title}`}
+                            href={item.href}
+                            onClick={rememberFeatureReturn}
+                            className="group/item flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
+                          >
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover/item:border-white/20 group-hover/item:bg-white/10 group-hover/item:text-white">
+                              <Icon size={18} />
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/item:text-white">
+                              {item.title}
+                            </span>
+                            <ArrowRight size={14} className="shrink-0 -translate-x-1 opacity-0 transition-all group-hover/item:translate-x-0 group-hover/item:opacity-100" />
+                          </Link>
+                        )
+                      })}
+                    </div>
+                    <div>
+                      <p className="px-3 pb-2 pt-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Workflow</p>
+                      {workflowDropdownItems.map((item) => {
+                        const Icon = item.icon
+                        return (
+                          <Link
+                            key={`workflow-${item.title}`}
+                            href={item.href}
+                            onClick={item.href.startsWith("/features/") ? rememberFeatureReturn : undefined}
+                            className="group/item flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
+                          >
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover/item:border-white/20 group-hover/item:bg-white/10 group-hover/item:text-white">
+                              <Icon size={18} />
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/item:text-white">
+                              {item.title}
+                            </span>
+                            <ArrowRight size={14} className="shrink-0 -translate-x-1 opacity-0 transition-all group-hover/item:translate-x-0 group-hover/item:opacity-100" />
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="group relative">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:bg-accent group-hover:text-white"
+                >
+                  Solutions
+                  <ChevronDown size={14} className="transition-transform group-hover:rotate-180" />
+                </button>
+                <div className="invisible absolute left-0 top-full z-50 w-[34rem] max-w-[calc(100vw-2rem)] translate-y-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-2 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-2 group-focus-within:opacity-100">
+                  <div className="grid gap-2 rounded-2xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl shadow-black/20 sm:grid-cols-2">
+                    {solutionDropdownColumns.map((column, columnIndex) => (
+                      <div key={`solutions-column-${columnIndex}`}>
+                        <p className="px-3 pb-2 pt-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                          {columnIndex === 0 ? "Teams" : "Organizations"}
+                        </p>
+                        {column.map((item) => {
+                          const Icon = item.icon
+                          return (
+                            <Link
+                              key={`solutions-${item.title}`}
+                              href={item.href}
+                              className="group/item flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
+                            >
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover/item:border-white/20 group-hover/item:bg-white/10 group-hover/item:text-white">
+                                <Icon size={18} />
+                              </span>
+                              <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/item:text-white">
+                                {item.title}
+                              </span>
+                              <ArrowRight size={14} className="shrink-0 -translate-x-1 opacity-0 transition-all group-hover/item:translate-x-0 group-hover/item:opacity-100" />
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="group relative">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:bg-accent group-hover:text-white"
+                >
+                  Pricing
+                  <ChevronDown size={14} className="transition-transform group-hover:rotate-180" />
+                </button>
+                <div className="invisible absolute left-0 top-full z-50 w-72 max-w-[calc(100vw-2rem)] translate-y-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-2 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-2 group-focus-within:opacity-100">
+                  <div className="rounded-2xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl shadow-black/20">
+                    {pricingDropdownItems.map((item) => {
+                      const Icon = item.icon
+                      return (
+                        <Link
+                          key={`pricing-${item.title}`}
+                          href={item.href}
+                          className="group/item flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover/item:border-white/20 group-hover/item:bg-white/10 group-hover/item:text-white">
+                            <Icon size={18} />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/item:text-white">
+                            {item.title}
+                          </span>
+                          <ArrowRight size={14} className="shrink-0 -translate-x-1 opacity-0 transition-all group-hover/item:translate-x-0 group-hover/item:opacity-100" />
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+              <Link href="/docs" className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white">Docs</Link>
+              <Link href="/docs" className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white">Blog</Link>
+            </div>
+          </div>
+
+          <div className="hidden items-center justify-end gap-6 md:flex">
             <Button
               variant="outline"
               size="icon"
@@ -302,7 +450,7 @@ export default function LandingPage() {
           </div>
 
           <button
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground md:hidden"
+            className="justify-self-end rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground lg:hidden"
             onClick={() => setMobileMenuOpen((open) => !open)}
             aria-label="Open menu"
           >
@@ -311,12 +459,115 @@ export default function LandingPage() {
         </div>
 
         {mobileMenuOpen && (
-          <div className="border-t border-border bg-background px-4 py-4 md:hidden">
-            <div className="space-y-4">
-              <a href="#platform" className="block text-muted-foreground hover:text-foreground">Platform</a>
-              <a href="#workflow" className="block text-muted-foreground hover:text-foreground">Workflow</a>
-              <a href="#pricing" className="block text-muted-foreground hover:text-foreground">Pricing</a>
-              <Link href="/docs" className="block text-muted-foreground hover:text-foreground">Docs</Link>
+          <div className="border-t border-border bg-background px-4 py-4 lg:hidden">
+            <div className="space-y-3">
+              <details className="rounded-lg border border-border bg-card/50 px-3 py-2">
+                <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
+                  <span className="inline-flex w-full items-center justify-between">
+                    Platform
+                    <ChevronDown size={14} className="text-muted-foreground" />
+                  </span>
+                </summary>
+                <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <p className="px-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Platform</p>
+                    {platformDropdownFeatures.map((item) => {
+                      const Icon = item.icon
+                      return (
+                        <Link
+                          key={`mobile-platform-${item.title}`}
+                          href={item.href}
+                          onClick={() => {
+                            rememberFeatureReturn()
+                            setMobileMenuOpen(false)
+                          }}
+                          className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
+                        >
+                          <Icon size={16} />
+                          {item.title}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="px-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Workflow</p>
+                    {workflowDropdownItems.map((item) => {
+                      const Icon = item.icon
+                      return (
+                        <Link
+                          key={`mobile-workflow-${item.title}`}
+                          href={item.href}
+                          onClick={() => {
+                            if (item.href.startsWith("/features/")) rememberFeatureReturn()
+                            setMobileMenuOpen(false)
+                          }}
+                          className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
+                        >
+                          <Icon size={16} />
+                          {item.title}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              </details>
+              <details className="rounded-lg border border-border bg-card/50 px-3 py-2">
+                <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
+                  <span className="inline-flex w-full items-center justify-between">
+                    Solutions
+                    <ChevronDown size={14} className="text-muted-foreground" />
+                  </span>
+                </summary>
+                <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-2">
+                  {solutionDropdownColumns.map((column, columnIndex) => (
+                    <div key={`mobile-solutions-column-${columnIndex}`} className="space-y-1">
+                      <p className="px-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                        {columnIndex === 0 ? "Teams" : "Organizations"}
+                      </p>
+                      {column.map((item) => {
+                        const Icon = item.icon
+                        return (
+                          <Link
+                            key={`mobile-solutions-${item.title}`}
+                            href={item.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
+                          >
+                            <Icon size={16} />
+                            {item.title}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </details>
+              <details className="rounded-lg border border-border bg-card/50 px-3 py-2">
+                <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
+                  <span className="inline-flex w-full items-center justify-between">
+                    Pricing
+                    <ChevronDown size={14} className="text-muted-foreground" />
+                  </span>
+                </summary>
+                <div className="mt-3 space-y-1 border-t border-border pt-3">
+                  {pricingDropdownItems.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={`mobile-pricing-${item.title}`}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
+                      >
+                        <Icon size={16} />
+                        {item.title}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </details>
+              <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="block rounded-lg border border-border bg-card/50 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-white">Docs</Link>
+              <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="block rounded-lg border border-border bg-card/50 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-white">Blog</Link>
               <Button variant="outline" className="w-full justify-start gap-2 bg-secondary/20" onClick={() => setTheme(isLightMode ? "dark" : "light")}>
                 {isLightMode ? <Moon size={18} className="text-primary" /> : <Sun size={18} className="text-primary" />}
                 {withShortcut(isLightMode ? "Dark mode" : "Light mode", "theme")}
@@ -346,7 +597,7 @@ export default function LandingPage() {
                 className="text-balance text-5xl font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl"
               />
               <TextBlurFadeIn
-                text="Audit Co-Flow connects restaurants, inventories, team permissions, and audit history into a fast operational workspace for modern hospitality teams."
+                text="AuditNett connects restaurants, inventories, team permissions, and audit history into a fast operational workspace for modern hospitality teams."
                 className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground sm:text-xl"
                 delay={0.22}
                 stagger={0.018}
@@ -366,7 +617,7 @@ export default function LandingPage() {
               </BlurFadeIn>
             </div>
 
-            <div className="mx-auto mt-16 grid max-w-7xl gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div id="features" className="mx-auto mt-16 grid max-w-7xl scroll-mt-24 gap-4 md:grid-cols-2 lg:grid-cols-4">
               {landingPlatformTiles.map((tile, index) => {
                 const Icon = tile.icon
                 const isActive = activeTile === index
@@ -484,17 +735,28 @@ export default function LandingPage() {
                     )}
                     {tile.title === "Remote Access" && (
                       <div
-                        className="absolute bottom-6 left-6 right-6 space-y-3 opacity-75 transition-opacity group-hover:opacity-100"
+                        className="absolute bottom-6 left-6 right-6 opacity-75 transition-opacity group-hover:opacity-100"
                         onMouseMove={(event) => handlePreviewMove(tile.title, event)}
                         onMouseLeave={() => setPreviewHover(null)}
                       >
                         {renderPreviewLabel(tile.title)}
-                        {["GoFlow Restaurant", "GoFlow Bar Template", "GoFlow Kitchen Template"].map((location, locationIndex) => (
-                          <div key={location} className="flex items-center justify-between rounded-full border border-border bg-card/90 px-4 py-2 text-xs">
-                            <span className="truncate text-muted-foreground">{location}</span>
-                            <span className={locationIndex === 0 ? "text-primary" : "text-accent"}>{locationIndex === 0 ? "Owner" : locationIndex === 1 ? "Audit" : "Read"}</span>
+                        <div className="relative h-40 overflow-hidden rounded-lg border border-border bg-card/80">
+                          <div className="absolute inset-x-1 top-5">
+                            <WorldMap dots={remoteAccessDots} lineColor="#0f6cb4" />
                           </div>
-                        ))}
+                          {[
+                            { name: "Maya Chen", task: "Bar audit", className: "left-[8%] top-[42%]" },
+                            { name: "Gustavo Camacho", task: "Kitchen inventory", className: "right-[5%] bottom-[18%]" },
+                          ].map((location) => (
+                            <span key={location.name} className={`absolute flex max-w-[9rem] items-start gap-1.5 rounded-2xl border border-border bg-card/95 px-2.5 py-1.5 text-[11px] text-foreground shadow-sm ${location.className}`}>
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                              <span className="min-w-0 leading-tight">
+                                <span className="block truncate font-medium">{location.name}</span>
+                                <span className="block truncate text-muted-foreground">{location.task}</span>
+                              </span>
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </Link>
@@ -506,26 +768,11 @@ export default function LandingPage() {
 
         <section id="platform" className="px-4 py-24 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-12 max-w-3xl">
+            <div className="max-w-3xl">
               <p className="text-sm font-medium text-primary">Use one module or the whole platform</p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 Best-of-breed controls, integrated around restaurant operations.
               </h2>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {productModules.map((module) => (
-                <Link key={module.title} href={module.href} className="group rounded-xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                  <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-                    <module.icon size={20} className="text-primary transition-transform group-hover:scale-110" />
-                  </div>
-                  <h3 className="text-base font-semibold text-foreground">{module.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{module.description}</p>
-                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
-                    Learn more
-                    <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
-                  </span>
-                </Link>
-              ))}
             </div>
           </div>
         </section>
@@ -538,7 +785,7 @@ export default function LandingPage() {
                 Create, assign, audit, export, and update stock without leaving the flow.
               </h2>
               <p className="mt-5 text-muted-foreground">
-                Audit Co-Flow keeps live restaurant context, permissions, audit tasks, and inventory updates connected through Supabase.
+                AuditNett keeps live restaurant context, permissions, audit tasks, and inventory updates connected through Supabase.
               </p>
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 {capabilities.map((capability) => (
@@ -655,49 +902,12 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="pricing" className="px-4 py-24 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mx-auto mb-12 max-w-2xl text-center">
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Simple plans for every operating rhythm</h2>
-              <p className="mt-4 text-muted-foreground">Start small, then add restaurants, users, and deeper audit history as the team grows.</p>
-            </div>
-            <div className="grid gap-5 lg:grid-cols-3">
-              {plans.map((plan) => (
-                <div key={plan.name} className={`relative rounded-xl border bg-card p-7 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 ${plan.popular ? "border-primary shadow-lg shadow-primary/10" : "border-border hover:border-primary/40"}`}>
-                  {plan.popular && (
-                    <span className="absolute right-5 top-5 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">Recommended</span>
-                  )}
-                  <h3 className="text-xl font-semibold text-foreground">{plan.name}</h3>
-                  <p className="mt-2 min-h-12 text-sm text-muted-foreground">{plan.description}</p>
-                  <div className="mt-6 flex items-end gap-1">
-                    <span className="text-4xl font-semibold text-foreground">{plan.price}</span>
-                    <span className="pb-1 text-sm text-muted-foreground">/month</span>
-                  </div>
-                  <ul className="mt-7 space-y-3">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex gap-3 text-sm text-muted-foreground">
-                        <Check size={16} className="mt-0.5 shrink-0 text-primary" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href="/signup" className="mt-7 block">
-                    <Button className={`w-full ${plan.popular ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-transparent"}`} variant={plan.popular ? "default" : "outline"}>
-                      Start with {plan.name}
-                    </Button>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="px-4 pb-24 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl rounded-2xl border border-border bg-card p-8 text-center transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 sm:p-12">
             <Shield size={28} className="mx-auto text-primary" />
             <h2 className="mt-5 text-3xl font-semibold tracking-tight text-foreground">Ready to make every count traceable?</h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              Create an Audit Co-Flow workspace and give your restaurant team a cleaner way to manage inventory, audits, and accountability.
+              Create an AuditNett workspace and give your restaurant team a cleaner way to manage inventory, audits, and accountability.
             </p>
             <Link href={appHref} className="mt-8 inline-flex">
               <Button size="lg" className="gap-2 bg-foreground text-background hover:bg-foreground/90">
@@ -717,9 +927,9 @@ export default function LandingPage() {
           <div className="flex items-center gap-5 text-sm text-muted-foreground">
             <Link href="/docs" className="hover:text-foreground">Docs</Link>
             <a href="#platform" className="hover:text-foreground">Platform</a>
-            <a href="#pricing" className="hover:text-foreground">Pricing</a>
+            <Link href="/docs" className="hover:text-foreground">Blog</Link>
           </div>
-          <p className="text-sm text-muted-foreground">2026 Audit Co-Flow. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">2026 AuditNett. All rights reserved.</p>
         </div>
       </footer>
     </div>

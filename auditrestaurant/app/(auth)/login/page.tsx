@@ -65,7 +65,7 @@ export default function LoginPage() {
           <div className="text-center">
             <AuditFlowLogo collapsed className="mx-auto mb-4 animate-pulse justify-center" imageClassName="h-16 w-16 rounded-2xl" />
             <p className="text-sm uppercase tracking-widest text-muted-foreground">Signing in...</p>
-            <h2 className="mt-2 text-2xl font-bold text-foreground">Audit Co-Flow</h2>
+            <h2 className="mt-2 text-2xl font-bold text-foreground">AuditNett</h2>
           </div>
         </div>
       )}
@@ -201,7 +201,7 @@ export default function LoginPage() {
               ))}
             </div>
             <p className="text-sm text-muted-foreground">
-              Join 2,500+ teams already using Audit Co-Flow
+              Join 2,500+ teams already using AuditNett
             </p>
           </div>
         </div>

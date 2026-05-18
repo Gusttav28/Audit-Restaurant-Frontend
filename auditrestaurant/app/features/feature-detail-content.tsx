@@ -276,7 +276,7 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
     eyebrow: "Structured inventory records",
     subtitle: "Keep items, suppliers, units, categories, phases, and stock snapshots organized by restaurant and inventory area.",
     overview: [
-      "Inventory Database is the foundation for every audit workflow in Audit Co-Flow. It keeps each item connected to its inventory type, category, supplier, unit, price, phase, current quantity, and stock history.",
+      "Inventory Database is the foundation for every audit workflow in AuditNett. It keeps each item connected to its inventory type, category, supplier, unit, price, phase, current quantity, and stock history.",
       "Teams can separate bar, kitchen, production, storage, and custom areas without mixing data across restaurants. This gives managers a clear source of truth before any audit starts.",
     ],
     icon: Database,
@@ -338,7 +338,7 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
     steps: [
       { title: "Create or invite a user", description: "Admins add a team member with name, email, password guidance, and assigned restaurant access." },
       { title: "Assign permissions", description: "Choose read, audit, create, edit, delete, or full admin permissions based on the user’s responsibilities." },
-      { title: "Load the correct session", description: "After login, Audit Co-Flow loads the user profile, restaurants, and permissions tied to that account." },
+      { title: "Load the correct session", description: "After login, AuditNett loads the user profile, restaurants, and permissions tied to that account." },
       { title: "Restrict actions", description: "The UI hides or blocks settings, deletion, editing, or audit actions when a user is not allowed to perform them." },
     ],
     preview: {
@@ -423,7 +423,7 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
     eyebrow: "Protected operational workspace",
     subtitle: "Keep dashboard, inventory, audits, reports, settings, and profile routes protected by account and restaurant permissions.",
     overview: [
-      "Authorized Area is the protected side of Audit Co-Flow. It controls access to operational pages after login and keeps users inside the restaurants and actions they are allowed to use.",
+      "Authorized Area is the protected side of AuditNett. It controls access to operational pages after login and keeps users inside the restaurants and actions they are allowed to use.",
       "This protects restaurant-specific data, blocks direct URL access when needed, and keeps collaborators from seeing admin-only settings.",
     ],
     icon: ShieldCheck,
@@ -545,7 +545,7 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
     },
     cta: "Explore analytics",
     docs: {
-      summary: "Analytics API explains how Audit Co-Flow turns audit and inventory records into useful metrics.",
+      summary: "Analytics API explains how AuditNett turns audit and inventory records into useful metrics.",
       sections: [
         {
           title: "How users interact with it",
@@ -619,7 +619,7 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
     eyebrow: "Work from any assigned location",
     subtitle: "Let users access the system remotely while keeping restaurants, inventory, audits, and actions limited by their permissions.",
     overview: [
-      "Remote Access makes Audit Co-Flow usable from the restaurant, office, or another location without exposing the wrong data. Each user sees only the restaurants assigned to their account.",
+      "Remote Access makes AuditNett usable from the restaurant, office, or another location without exposing the wrong data. Each user sees only the restaurants assigned to their account.",
       "This supports multi-location operators, external auditors, and managers who need to review tasks and inventory from different places.",
     ],
     icon: Globe2,
@@ -756,7 +756,7 @@ export function FeatureDetailPage({ featureKey }: { featureKey: FeatureKey }) {
           </section>
 
           <section className="mb-24 rounded-2xl border border-border bg-card p-6 sm:p-8">
-            <h2 className="text-2xl font-semibold text-foreground">How it works inside Audit Co-Flow</h2>
+            <h2 className="text-2xl font-semibold text-foreground">How it works inside AuditNett</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {feature.steps.map((step, index) => (
                 <div key={step.title} className="flex gap-4 rounded-xl border border-border bg-background/60 p-4 transition-colors hover:border-primary/40">

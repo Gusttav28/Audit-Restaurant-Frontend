@@ -6,8 +6,8 @@ import ThemeFavicon from '@/components/layout/theme-favicon'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Audit Co-Flow - Inventory & Audit Management',
-  description: 'Professional restaurant audit and inventory management system',
+  title: 'AuditNett - Inventory & Audit Management',
+  description: 'AuditNett professional restaurant audit and inventory management system',
   generator: 'v0.app',
   icons: {
     icon: [

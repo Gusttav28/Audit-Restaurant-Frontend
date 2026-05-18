@@ -770,7 +770,7 @@ const readPersistentAppDataCache = (cacheKey: string): CachedAppData | null => {
     appDataCache.set(cacheKey, cached)
     return cached
   } catch (error) {
-    console.warn("Failed to read Audit Co-Flow app data cache", error)
+    console.warn("Failed to read AuditNett app data cache", error)
     return null
   }
 }
@@ -780,7 +780,7 @@ const writePersistentAppDataCache = (cacheKey: string, cached: CachedAppData) =>
   try {
     window.localStorage.setItem(`${APP_DATA_CACHE_STORAGE_PREFIX}${cacheKey}`, JSON.stringify(cached))
   } catch (error) {
-    console.warn("Failed to write Audit Co-Flow app data cache", error)
+    console.warn("Failed to write AuditNett app data cache", error)
   }
 }
 
@@ -2835,7 +2835,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               {requestLoadingMessage ?? (isRouteLoading ? t("loadingData") : creatingRestaurantName ? t("creatingRestaurant") : t("loadingRestaurant"))}
             </p>
             <h2 className="mt-2 text-2xl font-bold text-foreground">
-              {creatingRestaurantName ?? loadingRestaurant?.name ?? "Audit Co-Flow"}
+              {creatingRestaurantName ?? loadingRestaurant?.name ?? "AuditNett"}
             </h2>
           </div>
         </div>

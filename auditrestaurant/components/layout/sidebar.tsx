@@ -438,7 +438,7 @@ export default function Sidebar() {
           <div className="text-center">
             <AuditFlowLogo collapsed className="mx-auto mb-4 animate-pulse justify-center" imageClassName="h-16 w-16 rounded-2xl" />
             <p className="text-sm uppercase tracking-widest text-muted-foreground">{t('loggingOut')}</p>
-            <h2 className="mt-2 text-2xl font-bold text-foreground">Audit Co-Flow</h2>
+            <h2 className="mt-2 text-2xl font-bold text-foreground">AuditNett</h2>
           </div>
         </div>
       )}

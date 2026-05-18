@@ -14,20 +14,20 @@ import {
 
 const docsContent: Record<string, { title: string; category: string; content: React.ReactNode }> = {
   "getting-started/introduction": {
-    title: "Introduction to Audit Co-Flow",
+    title: "Introduction to AuditNett",
     category: "Getting Started",
     content: (
       <div className="prose-content">
         <p className="lead">
-          Audit Co-Flow is a comprehensive inventory audit management system designed for restaurants, 
+          AuditNett is a comprehensive inventory audit management system designed for restaurants, 
           warehouses, and any business that needs to track stock accurately.
         </p>
         
-        <h2>What is Audit Co-Flow?</h2>
+        <h2>What is AuditNett?</h2>
         <p>
-          Audit Co-Flow helps you manage multiple inventories, perform accurate stock counts, detect 
+          AuditNett helps you manage multiple inventories, perform accurate stock counts, detect 
           discrepancies, and maintain complete audit history. Whether you're managing a single 
-          location or multiple sites, Audit Co-Flow provides the tools you need for precise inventory control.
+          location or multiple sites, AuditNett provides the tools you need for precise inventory control.
         </p>
         
         <h2>Key Concepts</h2>
@@ -40,7 +40,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
         
         <h2>Getting Started</h2>
         <p>
-          To begin using Audit Co-Flow, you'll need to create an account and set up your first inventory. 
+          To begin using AuditNett, you'll need to create an account and set up your first inventory. 
           Follow our Quick Start Guide to get up and running in minutes.
         </p>
       </div>
@@ -52,7 +52,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          Get up and running with Audit Co-Flow in just a few minutes. This guide walks you through 
+          Get up and running with AuditNett in just a few minutes. This guide walks you through 
           the essential steps to start managing your inventory.
         </p>
         
@@ -113,13 +113,13 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          Inventories are the foundation of Audit Co-Flow. Learn how to create and organize 
+          Inventories are the foundation of AuditNett. Learn how to create and organize 
           different inventory types for your business.
         </p>
         
         <h2>What is an Inventory?</h2>
         <p>
-          An inventory in Audit Co-Flow represents a logical grouping of items, typically based on 
+          An inventory in AuditNett represents a logical grouping of items, typically based on 
           location or category. For example, a restaurant might have separate inventories for:
         </p>
         <ul>
@@ -241,7 +241,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          Audits are the core feature of Audit Co-Flow. Learn how to create and start an audit 
+          Audits are the core feature of AuditNett. Learn how to create and start an audit 
           for any of your inventories.
         </p>
         
@@ -445,7 +445,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          Audit Co-Flow uses role-based access control to manage what team members can see and do.
+          AuditNett uses role-based access control to manage what team members can see and do.
         </p>
         
         <h2>Available Roles</h2>
@@ -505,7 +505,7 @@ const docsContent: Record<string, { title: string; category: string; content: Re
     content: (
       <div className="prose-content">
         <p className="lead">
-          Audit Co-Flow offers three subscription tiers to match your business needs.
+          AuditNett offers three subscription tiers to match your business needs.
         </p>
         
         <h2>Plan Comparison</h2>
@@ -663,7 +663,7 @@ export default function DocPage() {
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-border">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <span>2024 Audit Co-Flow</span>
+          <span>2024 AuditNett</span>
           <div className="flex gap-6">
             <Link href="/" className="hover:text-foreground">Home</Link>
             <Link href="/docs" className="hover:text-foreground">Documentation</Link>

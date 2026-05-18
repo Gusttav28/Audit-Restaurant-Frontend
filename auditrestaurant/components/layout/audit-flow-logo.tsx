@@ -27,7 +27,7 @@ export default function AuditFlowLogo({
     <div className={`flex min-w-0 items-center gap-2 ${className}`}>
       <Image
         src={logoSrc}
-        alt="Audit Co-Flow"
+        alt="AuditNett"
         width={92}
         height={92}
         priority
@@ -35,7 +35,7 @@ export default function AuditFlowLogo({
       />
       {!collapsed && (
         <div className="min-w-0">
-          <h1 className={`truncate text-xl font-bold ${textClassName}`}>Audit Co-Flow</h1>
+          <h1 className={`truncate text-xl font-bold ${textClassName}`}>AuditNett</h1>
         </div>
       )}
     </div>
