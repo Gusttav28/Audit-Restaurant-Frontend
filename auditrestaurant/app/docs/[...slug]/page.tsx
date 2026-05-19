@@ -5,7 +5,7 @@ import React from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import AuditFlowLogo from "@/components/layout/audit-flow-logo"
+import PublicNavbar from "@/components/public/public-navbar"
 import { 
   ClipboardCheck, ChevronRight, ArrowLeft, Book, Package, 
   FileText, BarChart3, Users, CreditCard, Check, AlertCircle,
@@ -579,15 +579,7 @@ export default function DocPage() {
   if (!doc) {
     return (
       <div className="min-h-screen bg-background">
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <Link href="/" className="flex items-center gap-2">
-                <AuditFlowLogo imageClassName="h-8 w-8 rounded-lg" textClassName="text-foreground" />
-              </Link>
-            </div>
-          </div>
-        </nav>
+        <PublicNavbar />
         
         <div className="pt-32 pb-16 px-4 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Article Not Found</h1>
@@ -606,26 +598,7 @@ export default function DocPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <AuditFlowLogo imageClassName="h-8 w-8 rounded-lg" textClassName="text-foreground" />
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                All Docs
-              </Link>
-              <Link href="/signup">
-                <Button className="bg-foreground text-background hover:bg-foreground/90">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PublicNavbar />
 
       {/* Content */}
       <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">

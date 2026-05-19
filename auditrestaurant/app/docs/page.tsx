@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import AuditFlowLogo from "@/components/layout/audit-flow-logo"
+import PublicNavbar from "@/components/public/public-navbar"
 import { 
   ClipboardCheck, Search, Book, Package, FileText, BarChart3, 
   Users, CreditCard, Settings, ChevronRight, ArrowRight
@@ -101,26 +101,7 @@ export default function DocsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <AuditFlowLogo imageClassName="h-8 w-8 rounded-lg" textClassName="text-foreground" />
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Home
-              </Link>
-              <Link href="/signup">
-                <Button className="bg-foreground text-background hover:bg-foreground/90">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PublicNavbar />
 
       {/* Hero */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 border-b border-border">
@@ -234,7 +215,7 @@ export default function DocsPage() {
           <div className="flex gap-6">
             <Link href="/" className="hover:text-foreground">Home</Link>
             <Link href="/#features" className="hover:text-foreground">Features</Link>
-            <Link href="/#pricing" className="hover:text-foreground">Pricing</Link>
+            <Link href="/subscription" className="hover:text-foreground">Pricing</Link>
           </div>
         </div>
       </footer>

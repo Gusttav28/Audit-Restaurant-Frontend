@@ -26,8 +26,8 @@ import {
   Workflow,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import InteractiveFeaturePreview from "./interactive-feature-preview"
+import PublicNavbar from "@/components/public/public-navbar"
 
 export type FeatureKey =
   | "inventory-database"
@@ -667,6 +667,13 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
 
 export const featureKeys = Object.keys(featurePages) as FeatureKey[]
 
+const platformCrossNavigation: Array<{ key: FeatureKey; title: string; href: string; icon: LucideIcon }> = [
+  { key: "inventory-database", title: "Inventory Database", href: "/features/inventory-database", icon: Database },
+  { key: "audit-functions", title: "Audit Functions", href: "/features/audit-functions", icon: Workflow },
+  { key: "real-time-tasks", title: "Real-Time Tasks", href: "/features/real-time-tasks", icon: Bell },
+  { key: "reports", title: "Analytics and Reports", href: "/features/reports", icon: BarChart3 },
+]
+
 export function isFeatureKey(value: string): value is FeatureKey {
   return featureKeys.includes(value as FeatureKey)
 }
@@ -677,25 +684,11 @@ export function FeatureDetailPage({ featureKey }: { featureKey: FeatureKey }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <nav className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <AuditFlowLogo imageClassName="h-8 w-8 rounded-md" textClassName="text-foreground" />
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/docs" className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline-flex">
-              Documentation
-            </Link>
-            <Link href="/signup">
-              <Button className="bg-foreground text-background hover:bg-foreground/90">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <PublicNavbar />
 
       <main className="px-4 pt-28 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <Link href="/#platform" className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+          <Link href="/#features" className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
             <ArrowLeft size={16} />
             Back to website
           </Link>
@@ -727,6 +720,29 @@ export function FeatureDetailPage({ featureKey }: { featureKey: FeatureKey }) {
             </div>
 
             <InteractiveFeaturePreview featureKey={featureKey} />
+          </section>
+
+          <section className="mt-16 rounded-2xl border border-border bg-card/40 p-4">
+            <p className="px-2 pb-3 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Explore platform</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {platformCrossNavigation.map((item) => {
+                const NavIcon = item.icon
+                const isCurrent = item.key === featureKey || (featureKey === "analytics-api" && item.key === "reports")
+                return (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    className={`group flex items-center gap-3 rounded-xl border p-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 ${isCurrent ? "border-primary/50 bg-primary/10" : "border-border bg-background/60"}`}
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <NavIcon size={20} className="text-primary" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{item.title}</span>
+                    <ArrowRight size={14} className="shrink-0 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                  </Link>
+                )
+              })}
+            </div>
           </section>
 
           <section className="border-y border-border bg-card/30 py-16 mt-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
@@ -783,21 +799,7 @@ export function FeatureDocumentationPage({ featureKey }: { featureKey: FeatureKe
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <nav className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <AuditFlowLogo imageClassName="h-8 w-8 rounded-md" textClassName="text-foreground" />
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href={`/features/${featureKey}`} className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline-flex">
-              Feature page
-            </Link>
-            <Link href="/signup">
-              <Button className="bg-foreground text-background hover:bg-foreground/90">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <PublicNavbar />
 
       <main className="px-4 pt-28 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl">

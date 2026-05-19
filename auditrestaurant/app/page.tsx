@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type MouseEvent } from "react"
 import Link from "next/link"
-import { useTheme } from "next-themes"
 import {
   ArrowRight,
   BarChart3,
@@ -38,10 +37,10 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import AuditFlowLogo from "@/components/layout/audit-flow-logo"
+import PublicNavbar from "@/components/public/public-navbar"
 import { BlurFadeIn, TextBlurFadeIn } from "@/components/ui/text-blur-fade-in"
 import WorldMap from "@/components/ui/world-map"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { isMacPlatform, shouldIgnoreShortcut, withShortcut } from "@/components/layout/shortcut-utils"
 
 const capabilities = [
   "Multi-restaurant switching",
@@ -176,6 +175,96 @@ const solutionDropdownColumns = [
   ],
 ]
 
+const solutionCarouselItems = solutionDropdownColumns.flat()
+
+const technologies = [
+  "Next.js",
+  "React",
+  "TypeScript",
+  "Tailwind CSS",
+  "Supabase",
+  "Recharts",
+  "shadcn/Radix UI",
+  "Aceternity UI",
+]
+
+function TechnologyLogo({ name }: { name: string }) {
+  if (name === "Next.js") {
+    return (
+      <svg viewBox="0 0 64 64" className="h-12 w-12" aria-hidden="true">
+        <circle cx="32" cy="32" r="28" fill="currentColor" opacity="0.12" />
+        <path d="M19 45V19h5.2l18.6 26h-5.6L24.2 27v18H19Z" fill="currentColor" />
+        <path d="M41 19h4v26h-4V19Z" fill="currentColor" opacity="0.7" />
+      </svg>
+    )
+  }
+
+  if (name === "React") {
+    return (
+      <svg viewBox="0 0 64 64" className="h-12 w-12" aria-hidden="true">
+        <circle cx="32" cy="32" r="5" fill="currentColor" />
+        <ellipse cx="32" cy="32" rx="24" ry="9" fill="none" stroke="currentColor" strokeWidth="3" />
+        <ellipse cx="32" cy="32" rx="24" ry="9" fill="none" stroke="currentColor" strokeWidth="3" transform="rotate(60 32 32)" />
+        <ellipse cx="32" cy="32" rx="24" ry="9" fill="none" stroke="currentColor" strokeWidth="3" transform="rotate(120 32 32)" />
+      </svg>
+    )
+  }
+
+  if (name === "TypeScript") {
+    return (
+      <svg viewBox="0 0 64 64" className="h-12 w-12" aria-hidden="true">
+        <rect x="8" y="8" width="48" height="48" rx="8" fill="currentColor" opacity="0.14" />
+        <path d="M18 24h24v5h-9v20h-6V29h-9v-5Zm25.5 24.8c-3.1 0-5.7-.8-7.7-2.3v-5.8c2.1 1.8 4.6 2.8 7.5 2.8 2.2 0 3.3-.7 3.3-2 0-.7-.3-1.2-1-1.6-.7-.4-1.9-.9-3.7-1.5-4.2-1.4-6.2-3.8-6.2-7.2 0-2.3.9-4.1 2.6-5.4 1.7-1.3 4-2 6.9-2 2.7 0 5 .6 6.8 1.8V31c-1.9-1.4-4-2-6.4-2-2 0-3 .6-3 1.8 0 .6.3 1.1.9 1.5.6.4 1.8.8 3.4 1.4 2.3.8 4 1.8 5 3 1 1.2 1.5 2.6 1.5 4.3 0 2.4-.9 4.3-2.7 5.7-1.8 1.4-4.2 2.1-7.2 2.1Z" fill="currentColor" />
+      </svg>
+    )
+  }
+
+  if (name === "Tailwind CSS") {
+    return (
+      <svg viewBox="0 0 64 64" className="h-12 w-12" aria-hidden="true">
+        <path d="M32 18c-6.4 0-10.4 3.2-12 9.6 2.4-3.2 5.2-4.4 8.4-3.6 1.8.5 3.1 1.8 4.6 3.3 2.5 2.6 5.4 5.7 11.8 5.7s10.4-3.2 12-9.6c-2.4 3.2-5.2 4.4-8.4 3.6-1.8-.5-3.1-1.8-4.6-3.3C41.3 21.1 38.4 18 32 18ZM19.2 31c-6.4 0-10.4 3.2-12 9.6 2.4-3.2 5.2-4.4 8.4-3.6 1.8.5 3.1 1.8 4.6 3.3 2.5 2.6 5.4 5.7 11.8 5.7s10.4-3.2 12-9.6c-2.4 3.2-5.2 4.4-8.4 3.6-1.8-.5-3.1-1.8-4.6-3.3C28.5 34.1 25.6 31 19.2 31Z" fill="currentColor" />
+      </svg>
+    )
+  }
+
+  if (name === "Supabase") {
+    return (
+      <svg viewBox="0 0 64 64" className="h-12 w-12" aria-hidden="true">
+        <path d="M35 6 13 35h19l-3 23 22-30H32l3-22Z" fill="currentColor" />
+      </svg>
+    )
+  }
+
+  if (name === "Recharts") {
+    return (
+      <svg viewBox="0 0 64 64" className="h-12 w-12" aria-hidden="true">
+        <rect x="12" y="34" width="8" height="16" rx="2" fill="currentColor" opacity="0.45" />
+        <rect x="28" y="24" width="8" height="26" rx="2" fill="currentColor" opacity="0.7" />
+        <rect x="44" y="14" width="8" height="36" rx="2" fill="currentColor" />
+        <path d="M11 26c7-10 14-10 21 0s14 10 21 0" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (name === "shadcn/Radix UI") {
+    return (
+      <svg viewBox="0 0 64 64" className="h-12 w-12" aria-hidden="true">
+        <rect x="14" y="14" width="16" height="16" rx="4" fill="currentColor" />
+        <rect x="34" y="14" width="16" height="16" rx="4" fill="currentColor" opacity="0.55" />
+        <rect x="14" y="34" width="16" height="16" rx="4" fill="currentColor" opacity="0.55" />
+        <rect x="34" y="34" width="16" height="16" rx="4" fill="currentColor" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 64 64" className="h-12 w-12" aria-hidden="true">
+      <path d="M32 8 56 52H44l-4-8H24l-4 8H8L32 8Zm-4 27h8l-4-9-4 9Z" fill="currentColor" />
+      <path d="M18 52h28" stroke="currentColor" strokeWidth="4" strokeLinecap="round" opacity="0.45" />
+    </svg>
+  )
+}
+
 const previewHoverLabels: Record<string, string[]> = {
   "Inventory Database": ["Stock updated", "Category tracked", "Inventory value"],
   Authentication: ["Owner access", "Read + Audit", "Secure login"],
@@ -219,13 +308,11 @@ const workflowSteps = [
 ]
 
 export default function LandingPage() {
-  const { theme, setTheme } = useTheme()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeTile, setActiveTile] = useState(0)
   const [previewHover, setPreviewHover] = useState<{ title: string; label: string; x: number; y: number } | null>(null)
   const [workflowStep, setWorkflowStep] = useState(0)
-  const isLightMode = theme === "light"
+  const [activeTechnology, setActiveTechnology] = useState("Next.js")
   const handlePreviewMove = (title: string, event: MouseEvent<HTMLElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
     const labels = previewHoverLabels[title] ?? [title]
@@ -258,19 +345,6 @@ export default function LandingPage() {
   }, [])
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (shouldIgnoreShortcut(event)) return
-      const hasModifier = isMacPlatform() ? event.metaKey : event.ctrlKey
-      if (!hasModifier || event.altKey || event.shiftKey || event.key.toLowerCase() !== "b") return
-      event.preventDefault()
-      setTheme(isLightMode ? "dark" : "light")
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isLightMode, setTheme])
-
-  useEffect(() => {
     const timer = window.setInterval(() => {
       setWorkflowStep((step) => (step + 1) % workflowSteps.length)
     }, 2600)
@@ -279,306 +353,10 @@ export default function LandingPage() {
 
   const appHref = isLoggedIn ? "/dashboard" : "/signup"
   const appCta = isLoggedIn ? "Open dashboard" : "Start your workspace"
-  const rememberFeatureReturn = () => {
-    window.sessionStorage.setItem("auditnett-return-section", "features")
-  }
 
   return (
     <div className="min-h-screen overflow-hidden bg-background text-foreground">
-      <nav className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-7">
-            <Link href="/" className="flex shrink-0 items-center gap-2">
-              <AuditFlowLogo imageClassName="h-8 w-8 rounded-md" textClassName="text-foreground" />
-            </Link>
-
-            <div className="hidden items-center gap-1 lg:flex">
-              <div className="group relative">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:bg-accent group-hover:text-white"
-                >
-                  Platform
-                  <ChevronDown size={14} className="transition-transform group-hover:rotate-180" />
-                </button>
-                <div className="invisible absolute left-0 top-full z-50 w-[38rem] max-w-[calc(100vw-2rem)] translate-y-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-2 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-2 group-focus-within:opacity-100">
-                  <div className="grid gap-2 rounded-2xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl shadow-black/20 sm:grid-cols-2">
-                    <div>
-                      <p className="px-3 pb-2 pt-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Platform</p>
-                      {platformDropdownFeatures.map((item) => {
-                        const Icon = item.icon
-                        return (
-                          <Link
-                            key={`platform-${item.title}`}
-                            href={item.href}
-                            onClick={rememberFeatureReturn}
-                            className="group/item flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
-                          >
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover/item:border-white/20 group-hover/item:bg-white/10 group-hover/item:text-white">
-                              <Icon size={18} />
-                            </span>
-                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/item:text-white">
-                              {item.title}
-                            </span>
-                            <ArrowRight size={14} className="shrink-0 -translate-x-1 opacity-0 transition-all group-hover/item:translate-x-0 group-hover/item:opacity-100" />
-                          </Link>
-                        )
-                      })}
-                    </div>
-                    <div>
-                      <p className="px-3 pb-2 pt-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Workflow</p>
-                      {workflowDropdownItems.map((item) => {
-                        const Icon = item.icon
-                        return (
-                          <Link
-                            key={`workflow-${item.title}`}
-                            href={item.href}
-                            onClick={item.href.startsWith("/features/") ? rememberFeatureReturn : undefined}
-                            className="group/item flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
-                          >
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover/item:border-white/20 group-hover/item:bg-white/10 group-hover/item:text-white">
-                              <Icon size={18} />
-                            </span>
-                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/item:text-white">
-                              {item.title}
-                            </span>
-                            <ArrowRight size={14} className="shrink-0 -translate-x-1 opacity-0 transition-all group-hover/item:translate-x-0 group-hover/item:opacity-100" />
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="group relative">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:bg-accent group-hover:text-white"
-                >
-                  Solutions
-                  <ChevronDown size={14} className="transition-transform group-hover:rotate-180" />
-                </button>
-                <div className="invisible absolute left-0 top-full z-50 w-[34rem] max-w-[calc(100vw-2rem)] translate-y-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-2 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-2 group-focus-within:opacity-100">
-                  <div className="grid gap-2 rounded-2xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl shadow-black/20 sm:grid-cols-2">
-                    {solutionDropdownColumns.map((column, columnIndex) => (
-                      <div key={`solutions-column-${columnIndex}`}>
-                        <p className="px-3 pb-2 pt-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                          {columnIndex === 0 ? "Teams" : "Organizations"}
-                        </p>
-                        {column.map((item) => {
-                          const Icon = item.icon
-                          return (
-                            <Link
-                              key={`solutions-${item.title}`}
-                              href={item.href}
-                              className="group/item flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
-                            >
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover/item:border-white/20 group-hover/item:bg-white/10 group-hover/item:text-white">
-                                <Icon size={18} />
-                              </span>
-                              <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/item:text-white">
-                                {item.title}
-                              </span>
-                              <ArrowRight size={14} className="shrink-0 -translate-x-1 opacity-0 transition-all group-hover/item:translate-x-0 group-hover/item:opacity-100" />
-                            </Link>
-                          )
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="group relative">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:bg-accent group-hover:text-white"
-                >
-                  Pricing
-                  <ChevronDown size={14} className="transition-transform group-hover:rotate-180" />
-                </button>
-                <div className="invisible absolute left-0 top-full z-50 w-72 max-w-[calc(100vw-2rem)] translate-y-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-2 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-2 group-focus-within:opacity-100">
-                  <div className="rounded-2xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl shadow-black/20">
-                    {pricingDropdownItems.map((item) => {
-                      const Icon = item.icon
-                      return (
-                        <Link
-                          key={`pricing-${item.title}`}
-                          href={item.href}
-                          className="group/item flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
-                        >
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover/item:border-white/20 group-hover/item:bg-white/10 group-hover/item:text-white">
-                            <Icon size={18} />
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground transition-colors group-hover/item:text-white">
-                            {item.title}
-                          </span>
-                          <ArrowRight size={14} className="shrink-0 -translate-x-1 opacity-0 transition-all group-hover/item:translate-x-0 group-hover/item:opacity-100" />
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-              <Link href="/docs" className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white">Docs</Link>
-              <Link href="/docs" className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white">Blog</Link>
-            </div>
-          </div>
-
-          <div className="hidden items-center justify-end gap-6 md:flex">
-            <Button
-              variant="outline"
-              size="icon"
-              className="bg-secondary/20"
-              aria-label={withShortcut(isLightMode ? "Dark mode" : "Light mode", "theme")}
-              title={withShortcut(isLightMode ? "Dark mode" : "Light mode", "theme")}
-              onClick={() => setTheme(isLightMode ? "dark" : "light")}
-            >
-              {isLightMode ? <Moon size={18} className="text-primary" /> : <Sun size={18} className="text-primary" />}
-            </Button>
-            {isLoggedIn ? (
-              <Link href="/dashboard">
-                <Button className="bg-foreground text-background hover:bg-foreground/90">{appCta}</Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/login" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Sign in</Link>
-                <Link href="/signup">
-                  <Button className="bg-foreground text-background hover:bg-foreground/90">Start your workspace</Button>
-                </Link>
-              </>
-            )}
-          </div>
-
-          <button
-            className="justify-self-end rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground lg:hidden"
-            onClick={() => setMobileMenuOpen((open) => !open)}
-            aria-label="Open menu"
-          >
-            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="border-t border-border bg-background px-4 py-4 lg:hidden">
-            <div className="space-y-3">
-              <details className="rounded-lg border border-border bg-card/50 px-3 py-2">
-                <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
-                  <span className="inline-flex w-full items-center justify-between">
-                    Platform
-                    <ChevronDown size={14} className="text-muted-foreground" />
-                  </span>
-                </summary>
-                <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <p className="px-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Platform</p>
-                    {platformDropdownFeatures.map((item) => {
-                      const Icon = item.icon
-                      return (
-                        <Link
-                          key={`mobile-platform-${item.title}`}
-                          href={item.href}
-                          onClick={() => {
-                            rememberFeatureReturn()
-                            setMobileMenuOpen(false)
-                          }}
-                          className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
-                        >
-                          <Icon size={16} />
-                          {item.title}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="px-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Workflow</p>
-                    {workflowDropdownItems.map((item) => {
-                      const Icon = item.icon
-                      return (
-                        <Link
-                          key={`mobile-workflow-${item.title}`}
-                          href={item.href}
-                          onClick={() => {
-                            if (item.href.startsWith("/features/")) rememberFeatureReturn()
-                            setMobileMenuOpen(false)
-                          }}
-                          className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
-                        >
-                          <Icon size={16} />
-                          {item.title}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </div>
-              </details>
-              <details className="rounded-lg border border-border bg-card/50 px-3 py-2">
-                <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
-                  <span className="inline-flex w-full items-center justify-between">
-                    Solutions
-                    <ChevronDown size={14} className="text-muted-foreground" />
-                  </span>
-                </summary>
-                <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-2">
-                  {solutionDropdownColumns.map((column, columnIndex) => (
-                    <div key={`mobile-solutions-column-${columnIndex}`} className="space-y-1">
-                      <p className="px-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                        {columnIndex === 0 ? "Teams" : "Organizations"}
-                      </p>
-                      {column.map((item) => {
-                        const Icon = item.icon
-                        return (
-                          <Link
-                            key={`mobile-solutions-${item.title}`}
-                            href={item.href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
-                          >
-                            <Icon size={16} />
-                            {item.title}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </details>
-              <details className="rounded-lg border border-border bg-card/50 px-3 py-2">
-                <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
-                  <span className="inline-flex w-full items-center justify-between">
-                    Pricing
-                    <ChevronDown size={14} className="text-muted-foreground" />
-                  </span>
-                </summary>
-                <div className="mt-3 space-y-1 border-t border-border pt-3">
-                  {pricingDropdownItems.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <Link
-                        key={`mobile-pricing-${item.title}`}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
-                      >
-                        <Icon size={16} />
-                        {item.title}
-                      </Link>
-                    )
-                  })}
-                </div>
-              </details>
-              <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="block rounded-lg border border-border bg-card/50 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-white">Docs</Link>
-              <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="block rounded-lg border border-border bg-card/50 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-white">Blog</Link>
-              <Button variant="outline" className="w-full justify-start gap-2 bg-secondary/20" onClick={() => setTheme(isLightMode ? "dark" : "light")}>
-                {isLightMode ? <Moon size={18} className="text-primary" /> : <Sun size={18} className="text-primary" />}
-                {withShortcut(isLightMode ? "Dark mode" : "Light mode", "theme")}
-              </Button>
-              <Link href={appHref} className="block">
-                <Button className="w-full bg-foreground text-background hover:bg-foreground/90">{appCta}</Button>
-              </Link>
-            </div>
-          </div>
-        )}
-      </nav>
+      <PublicNavbar />
 
       <main>
         <section className="relative px-4 pt-28 sm:px-6 lg:px-8">
@@ -616,6 +394,28 @@ export default function LandingPage() {
                 </Link>
               </BlurFadeIn>
             </div>
+
+            <BlurFadeIn className="relative mx-auto mt-12 max-w-6xl overflow-hidden" delay={0.72}>
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-background to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-background to-transparent" />
+              <div className="auditnett-infinite-solutions flex w-max gap-4 py-2 hover:[animation-play-state:paused]">
+                {[...solutionCarouselItems, ...solutionCarouselItems].map((solution, index) => {
+                  const Icon = solution.icon
+                  return (
+                    <Link
+                      key={`${solution.title}-${index}`}
+                      href={solution.href}
+                      className="group flex h-28 w-64 shrink-0 items-center gap-4 rounded-2xl border border-border bg-card/80 p-5 text-left shadow-sm backdrop-blur transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10"
+                    >
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                        <Icon size={26} className="text-primary transition-transform group-hover:scale-110" />
+                      </span>
+                      <span className="text-lg font-semibold text-foreground">{solution.title}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </BlurFadeIn>
 
             <div id="features" className="mx-auto mt-16 grid max-w-7xl scroll-mt-24 gap-4 md:grid-cols-2 lg:grid-cols-4">
               {landingPlatformTiles.map((tile, index) => {
@@ -766,13 +566,40 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="platform" className="px-4 py-24 sm:px-6 lg:px-8">
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="max-w-3xl">
-              <p className="text-sm font-medium text-primary">Use one module or the whole platform</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                Best-of-breed controls, integrated around restaurant operations.
-              </h2>
+            <div className="grid gap-10 rounded-2xl border border-border bg-card/50 p-6 sm:p-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+              <div>
+                <p className="text-sm font-medium text-primary">Technology foundation</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  Built with modern tools for fast restaurant operations.
+                </h2>
+                <div className="mt-6 min-h-12">
+                  <TextBlurFadeIn
+                    key={activeTechnology}
+                    text={activeTechnology}
+                    className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl"
+                    stagger={0.02}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {technologies.map((technology) => (
+                  <button
+                    key={technology}
+                    type="button"
+                    aria-label={technology}
+                    title={technology}
+                    onMouseEnter={() => setActiveTechnology(technology)}
+                    onFocus={() => setActiveTechnology(technology)}
+                    className="group flex min-h-32 items-center justify-center rounded-xl border border-border bg-background/70 p-4 text-primary transition-all hover:-translate-y-1 hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 transition-colors group-hover:bg-primary/15">
+                      <TechnologyLogo name={technology} />
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -926,12 +753,33 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-5 text-sm text-muted-foreground">
             <Link href="/docs" className="hover:text-foreground">Docs</Link>
-            <a href="#platform" className="hover:text-foreground">Platform</a>
-            <Link href="/docs" className="hover:text-foreground">Blog</Link>
+            <a href="#features" className="hover:text-foreground">Platform</a>
+            <Link href="/blog" className="hover:text-foreground">Blog</Link>
           </div>
           <p className="text-sm text-muted-foreground">2026 AuditNett. All rights reserved.</p>
         </div>
       </footer>
+      <style jsx global>{`
+        @keyframes auditnett-solutions-scroll {
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(calc(-50% - 0.5rem));
+          }
+        }
+
+        .auditnett-infinite-solutions {
+          animation: auditnett-solutions-scroll 34s linear infinite;
+          will-change: transform;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .auditnett-infinite-solutions {
+            animation: none;
+          }
+        }
+      `}</style>
     </div>
   )
 }

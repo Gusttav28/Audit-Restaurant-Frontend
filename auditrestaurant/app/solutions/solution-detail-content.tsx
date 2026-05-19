@@ -24,8 +24,8 @@ import {
   UsersRound,
   Workflow,
 } from "lucide-react"
-import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { Button } from "@/components/ui/button"
+import PublicNavbar from "@/components/public/public-navbar"
 
 export type SolutionKey =
   | "individuals"
@@ -220,29 +220,15 @@ export function SolutionDetailPage({ solutionKey }: { solutionKey: SolutionKey }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <AuditFlowLogo imageClassName="h-8 w-8 rounded-md" textClassName="text-foreground" />
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/docs" className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline-flex">
-              Docs
-            </Link>
-            <Link href="/signup">
-              <Button className="bg-foreground text-background hover:bg-foreground/90">Create account</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicNavbar />
 
-      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
         <Link href="/#features" className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
           <ArrowLeft size={16} />
           Back to website
         </Link>
 
-        <section className="grid gap-8 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <section className="grid gap-10 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
               <Icon size={30} className="text-primary" />
@@ -265,24 +251,33 @@ export function SolutionDetailPage({ solutionKey }: { solutionKey: SolutionKey }
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-xl">
-            <p className="text-sm text-muted-foreground">Solution fit</p>
-            <h2 className="mt-2 text-2xl font-semibold text-foreground">{solution.title} workspace</h2>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {["Inventory", "Audits", "Reports"].map((label, index) => (
-                <div key={label} className="rounded-xl border border-border bg-background/70 p-4">
-                  <p className="text-xs text-muted-foreground">{label}</p>
-                  <p className="mt-3 text-2xl font-semibold text-foreground">{index === 0 ? "Live" : index === 1 ? "Ready" : "Clear"}</p>
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-2xl shadow-black/10">
+            <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+            <div className="relative">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">Solution dashboard</p>
+                  <h2 className="mt-1 text-2xl font-semibold text-foreground">{solution.title} workspace</h2>
                 </div>
-              ))}
-            </div>
-            <div className="mt-6 space-y-3">
-              {solution.help.map((item) => (
-                <div key={item} className="flex items-center gap-3 rounded-xl border border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
-                  <Check size={16} className="shrink-0 text-primary" />
-                  {item}
-                </div>
-              ))}
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">Demo</span>
+              </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {["Inventory", "Audits", "Reports"].map((label, index) => (
+                  <div key={label} className="rounded-xl border border-border bg-background/70 p-4">
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                    <p className="mt-3 text-2xl font-semibold text-foreground">{index === 0 ? "Live" : index === 1 ? "Ready" : "Clear"}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 overflow-hidden rounded-2xl border border-border">
+                {solution.help.map((item, index) => (
+                  <div key={item} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-border bg-background/70 px-4 py-4 text-sm last:border-b-0">
+                    <Check size={16} className="text-primary" />
+                    <span className="text-muted-foreground">{item}</span>
+                    <span className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">{index === 0 ? "Setup" : index === 1 ? "Operate" : "Review"}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -300,6 +295,28 @@ export function SolutionDetailPage({ solutionKey }: { solutionKey: SolutionKey }
                   <p className="text-sm font-medium text-foreground">{problem}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16">
+          <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+            <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+              <div>
+                <p className="text-sm font-medium text-primary">Main benefits</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">Clear controls without operational noise</h2>
+                <p className="mt-4 text-muted-foreground">
+                  AuditNett keeps the workflow narrow enough for daily use while still giving {solution.title.toLowerCase()} the structure needed for accountability.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {solution.help.map((benefit) => (
+                  <div key={benefit} className="rounded-xl border border-border bg-background/60 p-4 text-sm leading-6 text-foreground">
+                    <Check size={16} className="mb-3 text-primary" />
+                    {benefit}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -323,6 +340,19 @@ export function SolutionDetailPage({ solutionKey }: { solutionKey: SolutionKey }
               )
             })}
           </div>
+        </section>
+
+        <section className="rounded-3xl border border-border bg-card p-8 text-center sm:p-12">
+          <h2 className="text-3xl font-semibold tracking-tight text-foreground">Ready to shape this workspace?</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+            Create an AuditNett account and start with a clean restaurant, inventory, audit, and permission structure.
+          </p>
+          <Link href="/signup" className="mt-8 inline-flex">
+            <Button size="lg" className="gap-2 bg-foreground text-background hover:bg-foreground/90">
+              Create account
+              <ArrowRight size={18} />
+            </Button>
+          </Link>
         </section>
       </main>
     </div>
