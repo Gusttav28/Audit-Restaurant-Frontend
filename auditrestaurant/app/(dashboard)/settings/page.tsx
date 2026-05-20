@@ -498,11 +498,9 @@ export default function SettingsPage() {
             {[
               { id: 'general', label: 'General', icon: Palette },
               { id: 'inventory-preferences', label: t('inventoryPreferences'), icon: Package },
-              ...(isAdmin ? [{ id: 'assigned-work', label: t('assignedWork'), icon: Bell }] : []),
               { id: 'subscription', label: 'Subscription', icon: CreditCard },
               { id: 'notifications', label: 'Notifications', icon: Bell },
               { id: 'security', label: 'Security', icon: Lock },
-              { id: 'team', label: 'Team', icon: Users },
             ].map(tab => {
               const Icon = tab.icon
               return (

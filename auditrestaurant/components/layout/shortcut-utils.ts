@@ -3,10 +3,11 @@ export type ShortcutAction =
   | "inventory"
   | "audits"
   | "reports"
+  | "assignedWork"
+  | "team"
   | "settings"
   | "profile"
   | "notifications"
-  | "restaurant"
   | "theme"
   | "logout"
 
@@ -15,10 +16,11 @@ const shortcutKeys: Record<ShortcutAction, string> = {
   inventory: "I",
   audits: "A",
   reports: "R",
+  assignedWork: "J",
+  team: "T",
   settings: "S",
   profile: "P",
   notifications: "N",
-  restaurant: "J",
   theme: "B",
   logout: "Space",
 }
@@ -32,6 +34,8 @@ export function formatShortcut(action: ShortcutAction) {
   const modifier = isMacPlatform() ? "⌘" : "Ctrl"
   if (action === "sidebar") return `${modifier} + ${shortcutKeys[action]}`
   if (action === "notifications") return isMacPlatform() ? `^ + ${modifier} + N` : `Ctrl + Alt + N`
+  if (action === "assignedWork") return `${modifier} + ${shortcutKeys[action]}`
+  if (action === "team") return `Fn + ${modifier} + ${shortcutKeys[action]}`
   if (action === "theme") return `${modifier} + ${shortcutKeys[action]}`
   if (action === "logout") return `Shift + ${modifier} + Space`
   return `Shift + ${modifier} + ${shortcutKeys[action]}`

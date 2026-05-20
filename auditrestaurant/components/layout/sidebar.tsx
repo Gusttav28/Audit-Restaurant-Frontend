@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BarChart3, Package, FileText, Settings, Menu, X, Coins, Languages, User, PanelLeftClose, PanelLeftOpen, ChevronDown, LogOut } from 'lucide-react'
+import { BarChart3, Package, FileText, Settings, Menu, X, Coins, Languages, User, Users, PanelLeftClose, PanelLeftOpen, ChevronDown, LogOut, ClipboardCheck } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useAppContext } from '@/components/app-context'
@@ -56,6 +56,7 @@ export default function Sidebar() {
     t,
     currentUserName,
     isAdmin,
+    isPrimaryAdmin,
     isAppLoading,
     startRouteLoading,
   } = useAppContext()
@@ -70,7 +71,15 @@ export default function Sidebar() {
     { icon: Package, label: t('inventory'), href: '/inventory', shortcut: 'inventory' as const },
     { icon: FileText, label: t('audits'), href: '/audits', shortcut: 'audits' as const },
     { icon: BarChart3, label: t('reports'), href: '/reports', shortcut: 'reports' as const },
-    ...(isAdmin ? [{ icon: Settings, label: t('settings'), href: '/settings', shortcut: 'settings' as const }] : []),
+    ...(isAdmin ? [
+      { icon: ClipboardCheck, label: t('assignedWork'), href: '/assigned-work', shortcut: 'assignedWork' as const },
+    ] : []),
+    ...(isPrimaryAdmin ? [
+      { icon: Users, label: t('teamMembers'), href: '/team', shortcut: 'team' as const },
+    ] : []),
+    ...(isAdmin ? [
+      { icon: Settings, label: t('settings'), href: '/settings', shortcut: 'settings' as const },
+    ] : []),
   ]
 
   useEffect(() => {
@@ -165,6 +174,18 @@ export default function Sidebar() {
         return
       }
 
+      if (key === 'j' && !event.shiftKey) {
+        event.preventDefault()
+        if (isAdmin) navigateWithShortcut('/assigned-work')
+        return
+      }
+
+      if (key === 't' && !event.shiftKey && typeof event.getModifierState === 'function' && event.getModifierState('Fn')) {
+        event.preventDefault()
+        if (isPrimaryAdmin) navigateWithShortcut('/team')
+        return
+      }
+
       if (!event.shiftKey) return
 
       if (key === 'i') {
@@ -197,15 +218,11 @@ export default function Sidebar() {
         return
       }
 
-      if (key === 'j') {
-        event.preventDefault()
-        window.dispatchEvent(new CustomEvent('auditflow:open-restaurant-menu'))
-      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isAdmin, isAppLoading, isOpen, pathname, router, setTheme, startRouteLoading, theme])
+  }, [isAdmin, isAppLoading, isOpen, isPrimaryAdmin, pathname, router, setTheme, startRouteLoading, theme])
 
   const actionLabel = (label: string, action?: ShortcutAction) => action ? withShortcut(label, action) : label
   const shortcutText = (action?: ShortcutAction) => action ? formatShortcut(action) : null

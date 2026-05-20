@@ -4,6 +4,7 @@ import React from 'react'
 import { Edit2, Trash2, Play, Eye, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { useAppContext } from '@/components/app-context'
 
 interface AuditItem {
   itemId: number
@@ -27,6 +28,8 @@ interface Audit {
   inventoryName: string
   inventoryColor: string
   auditor: string
+  auditorId?: string
+  assignedByAdminId?: string
   createdDate: string
   startedDate: string | null
   completedDate: string | null
@@ -46,6 +49,9 @@ interface AuditsTableProps {
 }
 
 export default function AuditsTable({ audits, onUpdateAudit, onDeleteAudit }: AuditsTableProps) {
+  const { assignedAuditTasks, t } = useAppContext()
+  const assignedTaskIds = React.useMemo(() => new Set(assignedAuditTasks.map((audit) => audit.id)), [assignedAuditTasks])
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -101,10 +107,26 @@ export default function AuditsTable({ audits, onUpdateAudit, onDeleteAudit }: Au
         </thead>
         <tbody>
           {audits.length > 0 ? (
-            audits.map((audit) => (
-              <tr key={audit.id} className="border-b border-border hover:bg-secondary/20 transition-colors">
+            audits.map((audit) => {
+              const isAssignedToCurrentUser = assignedTaskIds.has(audit.id)
+              return (
+              <tr
+                key={audit.id}
+                className={`border-b border-border transition-colors ${
+                  isAssignedToCurrentUser
+                    ? 'bg-primary/10 ring-1 ring-inset ring-primary/35 hover:bg-primary/15'
+                    : 'hover:bg-secondary/20'
+                }`}
+              >
                 <td className="py-3 px-4 font-mono text-xs font-bold text-accent">
-                  <Link href={`/audits/${audit.id}`} className="hover:underline">{audit.id}</Link>
+                  <div className="flex flex-col gap-1">
+                    <Link href={`/audits/${audit.id}`} className="hover:underline">{audit.id}</Link>
+                    {isAssignedToCurrentUser && (
+                      <span className="w-fit rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
+                        {t('assignedToYou')}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
@@ -184,7 +206,7 @@ export default function AuditsTable({ audits, onUpdateAudit, onDeleteAudit }: Au
                   </div>
                 </td>
               </tr>
-            ))
+            )})
           ) : (
             <tr>
               <td colSpan={8} className="py-8 text-center text-muted-foreground">

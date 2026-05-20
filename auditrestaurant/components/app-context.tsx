@@ -40,8 +40,11 @@ const dictionary = {
     refresh: "Refresh",
     auditPermission: "Audit",
     assignedAuditTasks: "Assigned audit tasks",
+    assignedToYou: "Assigned to you",
     assignedWork: "Assigned work",
     assignedWorkSubtitle: "Audit tasks assigned by administrators",
+    filterByCollaborator: "Filter by collaborator",
+    allCollaborators: "All collaborators",
     editAssignedWork: "Edit assigned work",
     deleteAssignedWork: "Delete assigned work",
     deleteAssignedWorkBody: "This removes the assigned audit task. Type delete and the audit ID to confirm.",
@@ -322,8 +325,11 @@ const dictionary = {
     refresh: "Actualizar",
     auditPermission: "Auditar",
     assignedAuditTasks: "Tareas de auditoría asignadas",
+    assignedToYou: "Asignada a ti",
     assignedWork: "Trabajo asignado",
     assignedWorkSubtitle: "Tareas de auditoría asignadas por administradores",
+    filterByCollaborator: "Filtrar por colaborador",
+    allCollaborators: "Todos los colaboradores",
     editAssignedWork: "Editar trabajo asignado",
     deleteAssignedWork: "Eliminar trabajo asignado",
     deleteAssignedWorkBody: "Esto elimina la tarea de auditoría asignada. Escribe delete y el ID de auditoría para confirmar.",
@@ -803,7 +809,7 @@ const writePersistentAppDataCache = (cacheKey: string, cached: CachedAppData) =>
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const shouldLoadAppData = ["/dashboard", "/inventory", "/audits", "/reports", "/settings", "/profile"].some((route) =>
+  const shouldLoadAppData = ["/dashboard", "/inventory", "/audits", "/reports", "/assigned-work", "/team", "/settings", "/profile"].some((route) =>
     pathname.startsWith(route),
   )
   const hasAuthTransition = typeof window !== "undefined" && window.sessionStorage.getItem("auditflow-auth-transition") === "login"
@@ -859,7 +865,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refreshAssignedWork = async () => {
-    if (!isAdmin || !selectedRestaurant.remoteId) return
+    if (!selectedRestaurant.remoteId) return
     const supabase = createSupabaseDataClient()
     const { data, error } = await supabase
       .from("audits")

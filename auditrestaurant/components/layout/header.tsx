@@ -27,6 +27,7 @@ export default function Header() {
     requestRestaurantSwitch,
     createRestaurant,
     assignedAuditTasks,
+    refreshAssignedWork,
     isPrimaryAdmin,
     t,
   } = useAppContext()
@@ -42,7 +43,10 @@ export default function Header() {
     const openRestaurantMenu = () => {
       if (canOpenRestaurantMenu) setIsRestaurantMenuOpen(true)
     }
-    const openNotifications = () => setIsNotificationsOpen(true)
+    const openNotifications = () => {
+      setIsNotificationsOpen(true)
+      void refreshAssignedWork()
+    }
 
     window.addEventListener('auditflow:open-restaurant-menu', openRestaurantMenu)
     window.addEventListener('auditflow:open-notifications', openNotifications)
@@ -50,7 +54,7 @@ export default function Header() {
       window.removeEventListener('auditflow:open-restaurant-menu', openRestaurantMenu)
       window.removeEventListener('auditflow:open-notifications', openNotifications)
     }
-  }, [canOpenRestaurantMenu])
+  }, [canOpenRestaurantMenu, refreshAssignedWork])
 
   const handleCreateRestaurant = async () => {
     if (!newRestaurant.name.trim() || !newRestaurant.country.trim()) return
@@ -100,7 +104,7 @@ export default function Header() {
             <Button
               variant="outline"
               disabled={!canOpenRestaurantMenu}
-              title={withShortcut(t('switchRestaurant'), 'restaurant')}
+              title={t('switchRestaurant')}
               className="w-full max-w-sm justify-between gap-3 bg-secondary/20 disabled:cursor-default disabled:opacity-100 sm:w-auto sm:min-w-72"
             >
               <span className="flex min-w-0 items-center gap-2">
@@ -152,7 +156,13 @@ export default function Header() {
           >
             {isLightMode ? <Moon size={18} className="text-primary" /> : <Sun size={18} className="text-primary" />}
           </Button>
-          <DropdownMenu open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+          <DropdownMenu
+            open={isNotificationsOpen}
+            onOpenChange={(open) => {
+              setIsNotificationsOpen(open)
+              if (open) void refreshAssignedWork()
+            }}
+          >
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
