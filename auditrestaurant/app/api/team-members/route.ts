@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getAppUrl, sendTeamMemberWelcomeEmail } from "@/lib/email/resend"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
@@ -135,6 +136,22 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: insertMemberError.message }, { status: 400 })
       }
       members.push(member)
+    }
+
+    const [{ data: restaurantRows }, { data: creatorProfile }] = await Promise.all([
+      admin.from("restaurants").select("name").in("id", restaurantIds),
+      admin.from("profiles").select("full_name,email").eq("id", authData.user.id).maybeSingle(),
+    ])
+    const welcomeEmail = await sendTeamMemberWelcomeEmail({
+      to: email,
+      name,
+      role: dbRole === "admin" ? "Admin" : dbRole === "auditor" ? "Read + Audit" : "Collaborator",
+      restaurantNames: ((restaurantRows ?? []) as Array<{ name?: string }>).map((restaurant) => restaurant.name ?? "Assigned restaurant"),
+      loginUrl: `${getAppUrl()}/login`,
+      adminName: creatorProfile?.full_name ?? creatorProfile?.email ?? undefined,
+    })
+    if (!welcomeEmail.ok) {
+      console.error("Team member welcome email could not be sent", { email, userId, error: welcomeEmail.error })
     }
 
     return NextResponse.json({ member: members[0], members })

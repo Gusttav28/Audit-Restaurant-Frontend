@@ -70,19 +70,25 @@ export default function AssignedWorkPage() {
     setIsSavingAssignedWork(true)
     try {
       const targetInventory = selectedRestaurant.inventoryTypes.find((type) => type.id === editingAssignedWork.inventoryId)
-      const { error } = await createSupabaseDataClient()
-        .from('audits')
-        .update({
-          inventory_type_id: targetInventory?.remoteId,
-          auditor_id: editingAssignedWork.auditorId ?? null,
-          auditor_name: editingAssignedWork.auditor,
-          created_date: editingAssignedWork.dueDate ?? editingAssignedWork.createdDate,
-          started_date: editingAssignedWork.startedDate ?? editingAssignedWork.dueDate ?? editingAssignedWork.createdDate,
+      if (!selectedRestaurant.remoteId || !targetInventory?.remoteId) throw new Error('Missing remote assigned work context')
+      const response = await fetch('/api/assigned-work', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          auditId: editingAssignedWork.remoteId,
+          restaurantId: selectedRestaurant.remoteId,
+          inventoryTypeId: targetInventory.remoteId,
+          auditorId: editingAssignedWork.auditorId,
+          auditorName: editingAssignedWork.auditor,
+          dueDate: editingAssignedWork.dueDate ?? editingAssignedWork.createdDate,
           status: editingAssignedWork.status,
           notes: buildAssignmentNotes(editingAssignedWork),
-        })
-        .eq('id', editingAssignedWork.remoteId)
-      if (error) throw error
+          helperName: editingAssignedWork.helperName,
+          temporaryHelperName: editingAssignedWork.temporaryHelperName,
+        }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error ?? 'Could not update assigned work')
       updateSelectedRestaurant((restaurant) => ({
         ...restaurant,
         audits: restaurant.audits.map((audit) => audit.id === editingAssignedWork.id ? editingAssignedWork : audit),

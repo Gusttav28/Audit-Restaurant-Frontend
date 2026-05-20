@@ -16,7 +16,7 @@ export function TextBlurFadeIn({
   as: Component = "p",
   className,
   delay = 0,
-  stagger = 0.035,
+  stagger = 0.014,
 }: TextBlurFadeInProps) {
   const words = text.split(" ")
   const content = words.map((word, index) => (
@@ -24,11 +24,11 @@ export function TextBlurFadeIn({
       key={`${word}-${index}`}
       aria-hidden="true"
       className="inline-block"
-      initial={{ opacity: 0, filter: "blur(10px)", y: 12 }}
+      initial={{ opacity: 0, filter: "blur(6px)", y: 6 }}
       whileInView={{ opacity: 1, filter: "blur(0px)", y: 0 }}
       viewport={{ once: true, margin: "-10% 0px" }}
       transition={{
-        duration: 0.55,
+        duration: 0.28,
         ease: "easeOut",
         delay: delay + index * stagger,
       }}
@@ -65,10 +65,10 @@ export function BlurFadeIn({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, filter: "blur(12px)", y: 16 }}
+      initial={{ opacity: 0, filter: "blur(6px)", y: 8 }}
       whileInView={{ opacity: 1, filter: "blur(0px)", y: 0 }}
       viewport={{ once: true, margin: "-10% 0px" }}
-      transition={{ duration: 0.65, ease: "easeOut", delay }}
+      transition={{ duration: 0.32, ease: "easeOut", delay }}
     >
       {children}
     </motion.div>

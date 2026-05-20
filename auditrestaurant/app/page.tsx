@@ -369,18 +369,13 @@ export default function LandingPage() {
             </Link>
 
             <div className="mx-auto max-w-4xl text-center">
-              <TextBlurFadeIn
-                as="h1"
-                text="Run every inventory audit from one source of truth"
-                className="text-balance text-5xl font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl"
-              />
-              <TextBlurFadeIn
-                text="AuditNett connects restaurants, inventories, team permissions, and audit history into a fast operational workspace for modern hospitality teams."
-                className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground sm:text-xl"
-                delay={0.22}
-                stagger={0.018}
-              />
-              <BlurFadeIn className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row" delay={0.55}>
+              <h1 className="text-balance text-5xl font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+                Run every inventory audit from one source of truth
+              </h1>
+              <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-8 text-muted-foreground sm:text-xl">
+                AuditNett connects restaurants, inventories, team permissions, and audit history into a fast operational workspace for modern hospitality teams.
+              </p>
+              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link href={appHref}>
                   <Button size="lg" className="h-12 gap-2 bg-primary px-6 text-primary-foreground hover:bg-primary/90">
                     {appCta}
@@ -392,10 +387,10 @@ export default function LandingPage() {
                     See the workflow
                   </Button>
                 </Link>
-              </BlurFadeIn>
+              </div>
             </div>
 
-            <BlurFadeIn className="relative mx-auto mt-12 max-w-6xl overflow-hidden" delay={0.72}>
+            <BlurFadeIn className="relative mx-auto mt-12 max-w-6xl overflow-hidden" delay={0.16}>
               <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-background to-transparent" />
               <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-background to-transparent" />
               <div className="auditnett-infinite-solutions flex w-max gap-4 py-2 hover:[animation-play-state:paused]">

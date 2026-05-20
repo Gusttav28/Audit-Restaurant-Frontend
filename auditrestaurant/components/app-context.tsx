@@ -2234,6 +2234,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               auditorName: audit.auditor,
               auditDate: audit.auditDate,
               notes: persistedNotes,
+              helperName: audit.helperName,
+              temporaryHelperName: audit.temporaryHelperName,
               items,
             }),
           })

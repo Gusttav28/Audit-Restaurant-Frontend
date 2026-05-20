@@ -79,11 +79,20 @@ function rememberFeatureReturn() {
   window.sessionStorage.setItem("auditnett-return-section", "features")
 }
 
+function mobileMenuReveal(index: number) {
+  return {
+    className: "auditnett-mobile-menu-reveal",
+    style: { animationDelay: `${Math.min(index * 54, 360)}ms` },
+  }
+}
+
 function DropdownItem({
   item,
+  index = 0,
   onClick,
 }: {
   item: { icon: typeof Database; title: string; href: string }
+  index?: number
   onClick?: () => void
 }) {
   const Icon = item.icon
@@ -92,7 +101,8 @@ function DropdownItem({
     <Link
       href={item.href}
       onClick={onClick}
-      className="group/item flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none"
+      style={{ transitionDelay: `${Math.min(index * 60, 400)}ms, ${Math.min(index * 60, 400)}ms, 0ms` }}
+      className="group/item flex translate-y-1 items-center gap-3 rounded-xl px-3 py-2.5 opacity-0 transition-[opacity,transform,background-color,color] duration-300 hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none group-hover/nav-dropdown:translate-y-0 group-hover/nav-dropdown:opacity-100 group-focus-within/nav-dropdown:translate-y-0 group-focus-within/nav-dropdown:opacity-100"
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary transition-colors group-hover/item:border-white/20 group-hover/item:bg-white/10 group-hover/item:text-white">
         <Icon size={18} />
@@ -107,10 +117,12 @@ function DropdownItem({
 
 function MobileDropdownItem({
   item,
+  index = 0,
   closeMenu,
   onClick,
 }: {
   item: { icon: typeof Database; title: string; href: string }
+  index?: number
   closeMenu: () => void
   onClick?: () => void
 }) {
@@ -123,7 +135,8 @@ function MobileDropdownItem({
         onClick?.()
         closeMenu()
       }}
-      className="flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
+      style={{ animationDelay: `${Math.min(index * 54, 360)}ms` }}
+      className="auditnett-mobile-dropdown-reveal flex items-center gap-3 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-white"
     >
       <Icon size={16} />
       {item.title}
@@ -171,7 +184,7 @@ export default function PublicNavbar() {
           </Link>
 
           <div className="hidden items-center gap-1 lg:flex">
-            <div className="group relative">
+            <div className="group group/nav-dropdown relative">
               <button
                 type="button"
                 className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:bg-accent group-hover:text-white"
@@ -183,16 +196,17 @@ export default function PublicNavbar() {
                 <div className="grid gap-2 rounded-2xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl shadow-black/20 sm:grid-cols-2">
                   <div>
                     <p className="px-3 pb-2 pt-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Platform</p>
-                    {platformDropdownFeatures.map((item) => (
-                      <DropdownItem key={`platform-${item.title}`} item={item} onClick={rememberFeatureReturn} />
+                    {platformDropdownFeatures.map((item, index) => (
+                      <DropdownItem key={`platform-${item.title}`} item={item} index={index} onClick={rememberFeatureReturn} />
                     ))}
                   </div>
                   <div>
                     <p className="px-3 pb-2 pt-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Workflow</p>
-                    {workflowDropdownItems.map((item) => (
+                    {workflowDropdownItems.map((item, index) => (
                       <DropdownItem
                         key={`workflow-${item.title}`}
                         item={item}
+                        index={platformDropdownFeatures.length + index}
                         onClick={item.href.startsWith("/features/") ? rememberFeatureReturn : undefined}
                       />
                     ))}
@@ -201,7 +215,7 @@ export default function PublicNavbar() {
               </div>
             </div>
 
-            <div className="group relative">
+            <div className="group group/nav-dropdown relative">
               <button
                 type="button"
                 className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:bg-accent group-hover:text-white"
@@ -216,8 +230,8 @@ export default function PublicNavbar() {
                       <p className="px-3 pb-2 pt-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
                         {columnIndex === 0 ? "Teams" : "Organizations"}
                       </p>
-                      {column.map((item) => (
-                        <DropdownItem key={`solutions-${item.title}`} item={item} />
+                      {column.map((item, itemIndex) => (
+                        <DropdownItem key={`solutions-${item.title}`} item={item} index={columnIndex * 5 + itemIndex} />
                       ))}
                     </div>
                   ))}
@@ -225,7 +239,7 @@ export default function PublicNavbar() {
               </div>
             </div>
 
-            <div className="group relative">
+            <div className="group group/nav-dropdown relative">
               <button
                 type="button"
                 className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:bg-accent group-hover:text-white"
@@ -235,8 +249,8 @@ export default function PublicNavbar() {
               </button>
               <div className="invisible absolute left-0 top-full z-50 w-72 max-w-[calc(100vw-2rem)] translate-y-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-2 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-2 group-focus-within:opacity-100">
                 <div className="rounded-2xl border border-border bg-popover p-3 text-popover-foreground shadow-2xl shadow-black/20">
-                  {pricingDropdownItems.map((item) => (
-                    <DropdownItem key={`pricing-${item.title}`} item={item} />
+                  {pricingDropdownItems.map((item, index) => (
+                    <DropdownItem key={`pricing-${item.title}`} item={item} index={index} />
                   ))}
                 </div>
               </div>
@@ -290,7 +304,7 @@ export default function PublicNavbar() {
       {mobileMenuOpen && (
         <div className="border-t border-border bg-background px-4 py-4 lg:hidden">
           <div className="space-y-3">
-            <details className="rounded-lg border border-border bg-card/50 px-3 py-2">
+            <details {...mobileMenuReveal(0)} className={`${mobileMenuReveal(0).className} group/mobile-details rounded-lg border border-border bg-card/50 px-3 py-2`}>
               <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
                 <span className="inline-flex w-full items-center justify-between">
                   Platform
@@ -300,16 +314,17 @@ export default function PublicNavbar() {
               <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <p className="px-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Platform</p>
-                  {platformDropdownFeatures.map((item) => (
-                    <MobileDropdownItem key={`mobile-platform-${item.title}`} item={item} closeMenu={() => setMobileMenuOpen(false)} onClick={rememberFeatureReturn} />
+                  {platformDropdownFeatures.map((item, index) => (
+                    <MobileDropdownItem key={`mobile-platform-${item.title}`} item={item} index={index} closeMenu={() => setMobileMenuOpen(false)} onClick={rememberFeatureReturn} />
                   ))}
                 </div>
                 <div className="space-y-1">
                   <p className="px-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Workflow</p>
-                  {workflowDropdownItems.map((item) => (
+                  {workflowDropdownItems.map((item, index) => (
                     <MobileDropdownItem
                       key={`mobile-workflow-${item.title}`}
                       item={item}
+                      index={platformDropdownFeatures.length + index}
                       closeMenu={() => setMobileMenuOpen(false)}
                       onClick={item.href.startsWith("/features/") ? rememberFeatureReturn : undefined}
                     />
@@ -318,7 +333,7 @@ export default function PublicNavbar() {
               </div>
             </details>
 
-            <details className="rounded-lg border border-border bg-card/50 px-3 py-2">
+            <details {...mobileMenuReveal(1)} className={`${mobileMenuReveal(1).className} group/mobile-details rounded-lg border border-border bg-card/50 px-3 py-2`}>
               <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
                 <span className="inline-flex w-full items-center justify-between">
                   Solutions
@@ -331,15 +346,15 @@ export default function PublicNavbar() {
                     <p className="px-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                       {columnIndex === 0 ? "Teams" : "Organizations"}
                     </p>
-                    {column.map((item) => (
-                      <MobileDropdownItem key={`mobile-solutions-${item.title}`} item={item} closeMenu={() => setMobileMenuOpen(false)} />
+                    {column.map((item, itemIndex) => (
+                      <MobileDropdownItem key={`mobile-solutions-${item.title}`} item={item} index={columnIndex * 5 + itemIndex} closeMenu={() => setMobileMenuOpen(false)} />
                     ))}
                   </div>
                 ))}
               </div>
             </details>
 
-            <details className="rounded-lg border border-border bg-card/50 px-3 py-2">
+            <details {...mobileMenuReveal(2)} className={`${mobileMenuReveal(2).className} group/mobile-details rounded-lg border border-border bg-card/50 px-3 py-2`}>
               <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
                 <span className="inline-flex w-full items-center justify-between">
                   Pricing
@@ -347,25 +362,38 @@ export default function PublicNavbar() {
                 </span>
               </summary>
               <div className="mt-3 space-y-1 border-t border-border pt-3">
-                {pricingDropdownItems.map((item) => (
-                  <MobileDropdownItem key={`mobile-pricing-${item.title}`} item={item} closeMenu={() => setMobileMenuOpen(false)} />
+                {pricingDropdownItems.map((item, index) => (
+                  <MobileDropdownItem key={`mobile-pricing-${item.title}`} item={item} index={index} closeMenu={() => setMobileMenuOpen(false)} />
                 ))}
               </div>
             </details>
 
-            <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="block rounded-lg border border-border bg-card/50 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-white">
+            <Link {...mobileMenuReveal(3)} href="/docs" onClick={() => setMobileMenuOpen(false)} className={`${mobileMenuReveal(3).className} block rounded-lg border border-border bg-card/50 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-white`}>
               Docs
             </Link>
-            <Link href="/blog" onClick={() => setMobileMenuOpen(false)} className="block rounded-lg border border-border bg-card/50 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-white">
+            <Link {...mobileMenuReveal(4)} href="/blog" onClick={() => setMobileMenuOpen(false)} className={`${mobileMenuReveal(4).className} block rounded-lg border border-border bg-card/50 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-white`}>
               Blog
             </Link>
-            <Button variant="outline" className="w-full justify-start gap-2 bg-secondary/20" onClick={() => setTheme(isLightMode ? "dark" : "light")}>
+            <Button {...mobileMenuReveal(5)} variant="outline" className={`${mobileMenuReveal(5).className} w-full justify-start gap-2 bg-secondary/20`} onClick={() => setTheme(isLightMode ? "dark" : "light")}>
               {isLightMode ? <Moon size={18} className="text-primary" /> : <Sun size={18} className="text-primary" />}
-              {withShortcut(isLightMode ? "Dark mode" : "Light mode", "theme")}
+              {isLightMode ? "Dark mode" : "Light mode"}
             </Button>
-            <Link href={appHref} className="block">
-              <Button className="w-full bg-foreground text-background hover:bg-foreground/90">{appCta}</Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link {...mobileMenuReveal(6)} href={appHref} className={`${mobileMenuReveal(6).className} block`}>
+                <Button className="w-full bg-foreground text-background hover:bg-foreground/90">{appCta}</Button>
+              </Link>
+            ) : (
+              <>
+                <Link {...mobileMenuReveal(6)} href="/login" onClick={() => setMobileMenuOpen(false)} className={`${mobileMenuReveal(6).className} block`}>
+                  <Button variant="outline" className="w-full bg-secondary/20">
+                    Sign in
+                  </Button>
+                </Link>
+                <Link {...mobileMenuReveal(7)} href={appHref} className={`${mobileMenuReveal(7).className} block`}>
+                  <Button className="w-full bg-foreground text-background hover:bg-foreground/90">{appCta}</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getAppUrl, sendAuditAssignmentEmail } from "@/lib/email/resend"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
@@ -30,6 +31,8 @@ export async function POST(request: Request) {
     const requestedAuditorId = String(body.auditorId ?? "").trim()
     const auditDate = String(body.auditDate ?? new Date().toISOString().split("T")[0])
     const notes = String(body.notes ?? "")
+    const helperName = String(body.helperName ?? "").trim()
+    const temporaryHelperName = String(body.temporaryHelperName ?? "").trim()
     const items = Array.isArray(body.items) ? (body.items as AuditItemPayload[]) : []
 
     if (!restaurantId || !inventoryTypeId || !auditCode || !auditorName) {
@@ -46,7 +49,7 @@ export async function POST(request: Request) {
 
     const { data: restaurant, error: restaurantError } = await admin
       .from("restaurants")
-      .select("id,created_by")
+      .select("id,created_by,name")
       .eq("id", restaurantId)
       .single()
 
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
 
     const { data: inventoryType, error: inventoryTypeError } = await admin
       .from("inventory_types")
-      .select("id")
+      .select("id,name")
       .eq("id", inventoryTypeId)
       .eq("restaurant_id", restaurantId)
       .single()
@@ -167,6 +170,37 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: commentError.message }, { status: 400 })
       }
       comment = createdComment
+    }
+
+    if (isAdminUser && requestedAuditorId && requestedAuditorId !== authData.user.id) {
+      const [{ data: assigneeProfile }, { data: assignerProfile }] = await Promise.all([
+        admin.from("profiles").select("email,full_name").eq("id", requestedAuditorId).maybeSingle(),
+        admin.from("profiles").select("email,full_name").eq("id", authData.user.id).maybeSingle(),
+      ])
+
+      if (assigneeProfile?.email) {
+        const assignmentEmail = await sendAuditAssignmentEmail({
+          to: assigneeProfile.email,
+          name: assigneeProfile.full_name ?? auditorName,
+          auditCode: audit.audit_code,
+          restaurantName: restaurant.name ?? "Assigned restaurant",
+          inventoryName: inventoryType.name ?? "Assigned inventory",
+          dueDate: auditDate,
+          assignedBy: assignerProfile?.full_name ?? assignerProfile?.email ?? "Admin",
+          helperName,
+          temporaryHelperName,
+          auditUrl: `${getAppUrl()}/audits/${encodeURIComponent(audit.audit_code)}`,
+          status: "In progress",
+        })
+        if (!assignmentEmail.ok) {
+          console.error("Audit assignment email could not be sent", {
+            auditId: audit.id,
+            auditCode: audit.audit_code,
+            to: assigneeProfile.email,
+            error: assignmentEmail.error,
+          })
+        }
+      }
     }
 
     return NextResponse.json({ audit, auditItems: auditItems.data ?? [], comment })

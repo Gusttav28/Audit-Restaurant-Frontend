@@ -263,12 +263,38 @@
     animation-delay: 0.9s;
   }
 
+  .auditnett-mobile-menu-reveal {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: auditnett-mobile-menu-reveal 0.38s ease-out forwards;
+  }
+
+  .auditnett-mobile-dropdown-reveal {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  details[open] .auditnett-mobile-dropdown-reveal {
+    animation: auditnett-mobile-menu-reveal 0.38s ease-out forwards;
+  }
+
   @keyframes auditflow-video-sweep {
     0%, 28% {
       transform: translateX(-120%);
     }
     56%, 100% {
       transform: translateX(120%);
+    }
+  }
+
+  @keyframes auditnett-mobile-menu-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 

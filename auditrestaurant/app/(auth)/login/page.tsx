@@ -59,7 +59,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="flex h-dvh min-h-dvh overflow-hidden overscroll-none bg-background">
       {isLoading && (
         <div className="fixed inset-0 z-[100] flex h-dvh w-screen items-center justify-center bg-background">
           <div className="text-center">
@@ -70,15 +70,15 @@ export default function LoginPage() {
         </div>
       )}
       {/* Left Side - Form */}
-      <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-20 xl:px-24">
+      <div className="flex-1 flex flex-col justify-start px-4 pb-4 pt-6 sm:px-6 sm:pt-8 lg:justify-center lg:px-20 lg:py-0 xl:px-24">
         <div className="w-full max-w-sm mx-auto">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 mb-12">
+          <Link href="/" className="flex items-center gap-2 mb-6 lg:mb-12">
             <AuditFlowLogo imageClassName="h-10 w-10 rounded-lg" textClassName="text-foreground" />
           </Link>
 
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-5 lg:mb-8">
             <h1 className="text-2xl font-bold text-foreground mb-2">Welcome back</h1>
             <p className="text-muted-foreground">
               Enter your credentials to access your account
@@ -86,7 +86,7 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-5">
             {error && (
               <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                 {error}
@@ -166,7 +166,7 @@ export default function LoginPage() {
           </form>
 
           {/* Signup Link */}
-          <p className="mt-8 text-center text-muted-foreground">
+          <p className="mt-5 text-center text-muted-foreground lg:mt-8">
             {"Don't have an account? "}
             <Link href="/signup" className="text-primary hover:underline font-medium">
               Create one
