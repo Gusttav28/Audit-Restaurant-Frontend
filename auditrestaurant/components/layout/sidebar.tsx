@@ -231,13 +231,19 @@ export default function Sidebar() {
           tabIndex={isCollapsed ? 0 : -1}
         >
           <div className={`relative flex h-10 items-center ${isCollapsed ? 'justify-center' : 'justify-between gap-2'}`}>
-            <div className={`${isCollapsed ? 'absolute left-1/2 -translate-x-1/2 transition-opacity duration-150 group-hover/sidebar-logo:opacity-0 group-focus/sidebar-logo:opacity-0' : 'min-w-10'}`}>
-              <AuditFlowLogo collapsed={isCollapsed} />
+            <div className={`${isCollapsed ? 'absolute left-1/2 flex h-10 w-10 -translate-x-1/2 items-center justify-center transition-opacity duration-150 group-hover/sidebar-logo:opacity-0 group-focus/sidebar-logo:opacity-0' : 'min-w-10'}`}>
+              <AuditFlowLogo
+                collapsed={isCollapsed}
+                className={isCollapsed ? "justify-center" : ""}
+                imageClassName={isCollapsed ? "h-10 w-10 rounded-xl" : "h-9 w-9 rounded-lg"}
+              />
             </div>
             <button
               type="button"
-              onClick={() => {
-                if (!isAppLoading) setIsOpen((open) => !open)
+              onClick={(event) => {
+                if (isAppLoading) return
+                event.currentTarget.blur()
+                setIsOpen((open) => !open)
               }}
               disabled={isAppLoading}
               className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground transition-opacity duration-200 hover:bg-sidebar-accent disabled:cursor-wait xl:inline-flex ${isCollapsed ? 'absolute left-1/2 -translate-x-1/2 opacity-0 group-hover/sidebar-logo:opacity-100 group-focus/sidebar-logo:opacity-100' : 'opacity-100'}`}

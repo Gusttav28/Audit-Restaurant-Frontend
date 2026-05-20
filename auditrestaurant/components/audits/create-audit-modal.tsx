@@ -23,7 +23,7 @@ interface InventoryType {
 interface CreateAuditModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreate: (audit: { inventoryId: number; auditor: string; auditorId?: string; notes: string; auditDate: string; helperName?: string; temporaryHelperName?: string }) => void
+  onCreate: (audit: { inventoryId: number; auditor: string; auditorId?: string; notes: string; auditDate: string; helperName?: string; temporaryHelperName?: string }) => void | Promise<void>
   inventoryTypes: InventoryType[]
 }
 
@@ -47,6 +47,7 @@ export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryT
     notes: '',
     auditDate: new Date().toISOString().split('T')[0],
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -78,18 +79,23 @@ export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryT
     }))
   }
 
-  const handleSubmit = () => {
-    if (!formData.inventoryId || !formData.auditor || !formData.auditDate) return
-    onCreate(formData)
-    setFormData({
-      inventoryId: selectedInventoryId || inventoryTypes[0]?.id || 0,
-      auditor: currentUserName,
-      auditorId: currentMember?.userId ?? '',
-      helperName: '',
-      temporaryHelperName: '',
-      notes: '',
-      auditDate: new Date().toISOString().split('T')[0],
-    })
+  const handleSubmit = async () => {
+    if (!formData.inventoryId || !formData.auditor || !formData.auditDate || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      await onCreate(formData)
+      setFormData({
+        inventoryId: selectedInventoryId || inventoryTypes[0]?.id || 0,
+        auditor: currentUserName,
+        auditorId: currentMember?.userId ?? '',
+        helperName: '',
+        temporaryHelperName: '',
+        notes: '',
+        auditDate: new Date().toISOString().split('T')[0],
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (!isOpen) return null
@@ -204,8 +210,10 @@ export default function CreateAuditModal({ isOpen, onClose, onCreate, inventoryT
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="button" onClick={onClose} variant="outline" className="flex-1 bg-transparent">{t('cancel')}</Button>
-            <Button type="button" onClick={handleSubmit} disabled={!formData.inventoryId || !formData.auditor || !formData.auditDate} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">{t('createAudit')}</Button>
+            <Button type="button" onClick={onClose} variant="outline" className="flex-1 bg-transparent" disabled={isSubmitting}>{t('cancel')}</Button>
+            <Button type="button" onClick={handleSubmit} disabled={isSubmitting || !formData.inventoryId || !formData.auditor || !formData.auditDate} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">
+              {isSubmitting ? t('creatingAudit') : t('createAudit')}
+            </Button>
           </div>
         </form>
       </div>

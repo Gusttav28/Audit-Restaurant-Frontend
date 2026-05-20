@@ -31,7 +31,7 @@ export default function AuditFlowLogo({
         width={92}
         height={92}
         priority
-        className={`shrink-0 object-cover shadow-sm ${imageClassName}`}
+        className={`shrink-0 object-contain shadow-sm ${imageClassName}`}
       />
       {!collapsed && (
         <div className="min-w-0">

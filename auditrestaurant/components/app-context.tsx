@@ -276,6 +276,8 @@ const dictionary = {
     deleteTeamMember: "Delete team member",
     deleteTeamMemberBody: "This removes the team member and revokes their access. Type delete and the member email to confirm.",
     passwordRequirements: "Password must be at least 8 characters and include one uppercase letter.",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
     assignedRestaurant: "Assigned restaurant",
     selectAtLeastOneRestaurant: "Select at least one restaurant.",
     memberName: "Member Name",
@@ -556,6 +558,8 @@ const dictionary = {
     deleteTeamMember: "Eliminar miembro",
     deleteTeamMemberBody: "Esto elimina al miembro y revoca su acceso. Escribe delete y el correo del miembro para confirmar.",
     passwordRequirements: "La contraseña debe tener al menos 8 caracteres e incluir una letra mayúscula.",
+    showPassword: "Mostrar contraseña",
+    hidePassword: "Ocultar contraseña",
     assignedRestaurant: "Restaurante asignado",
     selectAtLeastOneRestaurant: "Selecciona al menos un restaurante.",
     memberName: "Nombre del Miembro",
@@ -716,6 +720,19 @@ const teamRoleToDbRole = (role: TeamMember["role"]): RestaurantMemberRow["role"]
   if (role === "Admin") return "admin"
   if (role === "Auditor") return "auditor"
   return "collaborator"
+}
+
+const createAuditCode = (restaurantId: number, auditDate: string, existingAudits: RestaurantAudit[]) => {
+  const datePart = (auditDate || new Date().toISOString().slice(0, 10)).replaceAll("-", "")
+  const prefix = `AUD-${restaurantId}-${datePart}-`
+  const nextSequence =
+    existingAudits.reduce((highest, audit) => {
+      if (!audit.id.startsWith(prefix)) return highest
+      const sequence = Number.parseInt(audit.id.slice(prefix.length), 10)
+      return Number.isFinite(sequence) ? Math.max(highest, sequence) : highest
+    }, 0) + 1
+
+  return `${prefix}${String(nextSequence).padStart(3, "0")}`
 }
 
 const defaultRestaurantSettings = {
@@ -1408,9 +1425,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }).format(amount)
   }
 
+  const isConnectivityError = (error: unknown) => {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return true
+
+    const message = error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String((error as { message?: unknown }).message ?? "")
+        : String(error ?? "")
+
+    return /failed to fetch|fetch failed|networkerror|network error|load failed|internet|offline|timeout|timed out|connection|abort/i.test(message)
+  }
+
   const syncError = (scope: string, error: unknown) => {
     console.error(`Failed to sync ${scope} with Supabase`, error)
-    setRequestError({ title: dictionary[language].requestErrorTitle, body: dictionary[language].requestErrorBody })
+    if (isConnectivityError(error)) {
+      setRequestError({ title: dictionary[language].requestErrorTitle, body: dictionary[language].requestErrorBody })
+    }
   }
 
   const getInventoryStatus = (quantity: number, minStock: number): InventoryItem["status"] => {
@@ -2140,8 +2171,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRequestLoadingMessage(t("creatingAudit"))
 
     const items = createAuditItems(audit.inventoryId)
-    const nextNumber = selectedRestaurant.audits.length + 1
-    const isAdminAssigned = isAdmin && Boolean(audit.auditorId) && audit.auditorId !== authUserId
+    const selectedAuditorId = audit.auditorId?.trim() || undefined
+    const isAdminAssigned = isAdmin && Boolean(selectedAuditorId) && selectedAuditorId !== authUserId
     const assignmentNotes = [
       audit.notes,
       audit.helperName ? `${t("helper")}: ${audit.helperName}` : "",
@@ -2149,12 +2180,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ].filter(Boolean).join("\n")
     const persistedNotes = `${assignmentNotes}${isAdminAssigned ? `\n[AuditFlowAssignment:${authUserId}:${currentUserName}]` : ""}`.trim()
     const newAudit: RestaurantAudit = {
-      id: `AUD-${selectedRestaurant.id}-${String(nextNumber).padStart(4, "0")}`,
+      id: createAuditCode(selectedRestaurant.id, audit.auditDate, selectedRestaurant.audits),
       inventoryId: inventory.id,
       inventoryName: inventory.name,
       inventoryColor: inventory.color,
       auditor: audit.auditor,
-      auditorId: audit.auditorId,
+      auditorId: selectedAuditorId,
       assignedByAdminId: isAdminAssigned ? authUserId ?? undefined : undefined,
       assignedByAdminName: isAdminAssigned ? currentUserName : undefined,
       assignedDate: isAdminAssigned ? audit.auditDate : undefined,
@@ -2186,71 +2217,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     try {
       if (selectedRestaurant.remoteId && inventory.remoteId) {
-          const supabase = createSupabaseDataClient()
-          const { data: userData } = await supabase.auth.getUser()
-          const { data: auditRow, error: auditError } = await supabase
-            .from("audits")
-            .insert({
-              restaurant_id: selectedRestaurant.remoteId,
-              inventory_type_id: inventory.remoteId,
-              audit_code: newAudit.id,
-              auditor_id: audit.auditorId ?? userData.user?.id ?? null,
-              auditor_name: audit.auditor,
-              created_date: audit.auditDate,
-              started_date: audit.auditDate,
-              completed_date: null,
-              status: "in-progress",
-              total_items: items.length,
-              counted_items: 0,
-              flagged_items: 0,
-              total_discrepancy: 0,
-              compliance: 0,
+          const response = await fetch("/api/audits", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              restaurantId: selectedRestaurant.remoteId,
+              inventoryTypeId: inventory.remoteId,
+              auditCode: newAudit.id,
+              auditorId: selectedAuditorId,
+              auditorName: audit.auditor,
+              auditDate: audit.auditDate,
               notes: persistedNotes,
-            })
-            .select("*")
-            .single()
-
-          if (auditError) throw auditError
-
-          const { data: auditItemRows, error: auditItemsError } = await supabase
-            .from("audit_items")
-            .insert(
-              items.map((auditItem) => ({
-                audit_id: auditRow.id,
-                inventory_item_id: auditItem.inventoryItemRemoteId ?? null,
-                item_name: auditItem.itemName,
-                category: auditItem.category,
-                previous_stock: auditItem.previousStock,
-                current_stock: null,
-                unit: auditItem.unit,
-                unit_price: auditItem.unitPrice,
-                phase: auditItem.phase ?? null,
-                merma_quantity: auditItem.mermaQuantity ?? null,
-                production_quantity: auditItem.productionQuantity ?? null,
-                difference: null,
-                result: "pending" as const,
-                notes: "",
-              })),
-            )
-            .select("*")
-
-          if (auditItemsError) throw auditItemsError
-
-          let commentRow: AuditCommentRow | null = null
-          if (assignmentNotes.trim()) {
-            const { data: createdComment, error: commentError } = await supabase
-              .from("audit_comments")
-              .insert({
-                audit_id: auditRow.id,
-                author_id: userData.user?.id ?? null,
-                author_name: audit.auditor,
-                content: assignmentNotes.trim(),
-              })
-              .select("*")
-              .single()
-            if (commentError) throw commentError
-            commentRow = createdComment as AuditCommentRow
+              items,
+            }),
+          })
+          const result = await response.json().catch(() => ({}))
+          if (!response.ok) {
+            throw new Error(result.error ?? "Could not create audit")
           }
+
+          const auditRow = result.audit as AuditRow
+          const auditItemRows = (result.auditItems ?? []) as AuditItemRow[]
+          const commentRow = (result.comment ?? null) as AuditCommentRow | null
 
           setRestaurants((currentRestaurants) =>
             currentRestaurants.map((restaurant) =>
@@ -2263,7 +2251,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                             ...existingAudit,
                             remoteId: auditRow.id,
                             items: existingAudit.items?.map((existingItem) => {
-                              const remoteItem = (auditItemRows as AuditItemRow[] | null)?.find(
+                              const remoteItem = auditItemRows.find(
                                 (row) =>
                                   row.inventory_item_id === existingItem.inventoryItemRemoteId ||
                                   row.item_name === existingItem.itemName,

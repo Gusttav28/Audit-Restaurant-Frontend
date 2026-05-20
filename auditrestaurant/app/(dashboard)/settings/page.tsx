@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
-import { Save, Lock, Bell, Users, Palette, CreditCard, Check, ArrowUpRight, AlertCircle, Loader2, Plus, X, Pencil, Trash2, RefreshCw, Package } from 'lucide-react'
+import { Save, Lock, Bell, Users, Palette, CreditCard, Check, ArrowUpRight, AlertCircle, Loader2, Plus, X, Pencil, Trash2, RefreshCw, Package, Eye, EyeOff } from 'lucide-react'
 import { useAppContext } from '@/components/app-context'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import type { RestaurantAudit } from '@/components/inventory/multi-restaurant-data'
@@ -75,6 +75,7 @@ export default function SettingsPage() {
   const [deleteAssignedWorkWord, setDeleteAssignedWorkWord] = useState('')
   const [deleteAssignedWorkId, setDeleteAssignedWorkId] = useState('')
   const [teamError, setTeamError] = useState("")
+  const [showNewMemberPassword, setShowNewMemberPassword] = useState(false)
   const [newTeamMember, setNewTeamMember] = useState<TeamMember>({
     name: '',
     email: '',
@@ -1330,15 +1331,15 @@ export default function SettingsPage() {
         </div>
       )}
       {isTeamModalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setIsTeamModalOpen(false)}>
-          <div className="w-full max-w-lg rounded-lg border border-border bg-card" onClick={(event) => event.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-border p-6">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-3 sm:p-4" onClick={() => setIsTeamModalOpen(false)}>
+          <div className="auditflow-thin-scrollbar w-full max-w-3xl rounded-lg border border-border bg-card shadow-xl max-h-[calc(100vh-2rem)] overflow-y-auto" onClick={(event) => event.stopPropagation()}>
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card p-4 sm:p-5">
               <h2 className="text-lg font-bold text-foreground">{t('addTeamMember')}</h2>
               <button onClick={() => setIsTeamModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X size={22} />
               </button>
             </div>
-            <div className="space-y-4 p-6">
+            <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium text-foreground">{t('memberName')}</label>
                 <input
@@ -1358,12 +1359,22 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-foreground">{t('password')}</label>
-                <input
-                  type="password"
-                  value={newTeamMember.password}
-                  onChange={(event) => setNewTeamMember((member) => ({ ...member, password: event.target.value }))}
-                  className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-foreground focus:outline-none focus:border-accent"
-                />
+                <div className="relative">
+                  <input
+                    type={showNewMemberPassword ? "text" : "password"}
+                    value={newTeamMember.password}
+                    onChange={(event) => setNewTeamMember((member) => ({ ...member, password: event.target.value }))}
+                    className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 pr-11 text-foreground focus:outline-none focus:border-accent"
+                  />
+                  <button
+                    type="button"
+                    aria-label={showNewMemberPassword ? t('hidePassword') : t('showPassword')}
+                    onClick={() => setShowNewMemberPassword((visible) => !visible)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    {showNewMemberPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
                 <p className="mt-2 text-xs text-muted-foreground">{t('passwordRequirements')}</p>
               </div>
               <div>
@@ -1385,7 +1396,7 @@ export default function SettingsPage() {
                   <option value="Collaborator">{t('collaborator')}</option>
                 </select>
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-foreground">{t('assignedRestaurants')}</label>
                 <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-border bg-secondary/20 p-2">
                   {restaurants.filter((restaurant) => restaurant.remoteId).map((restaurant) => (
@@ -1410,9 +1421,9 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
-              <div className="rounded-lg border border-border bg-secondary/20 p-4">
+              <div className="rounded-lg border border-border bg-secondary/20 p-4 md:col-span-2">
                 <p className="mb-3 text-sm font-medium text-foreground">{t('permissions')}</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                   {(['read', 'audit', 'create', 'edit', 'delete'] as const).map((permission) => (
                     <label key={permission} className="flex items-center gap-2 rounded-lg border border-border bg-background/50 px-3 py-2 text-sm text-foreground">
                       <input
@@ -1430,9 +1441,9 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
-              {teamError && <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{teamError}</p>}
+              {teamError && <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive md:col-span-2">{teamError}</p>}
             </div>
-            <div className="flex gap-3 border-t border-border p-6">
+            <div className="sticky bottom-0 flex gap-3 border-t border-border bg-card p-4 sm:p-5">
               <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setIsTeamModalOpen(false)}>
                 {t('cancel')}
               </Button>
