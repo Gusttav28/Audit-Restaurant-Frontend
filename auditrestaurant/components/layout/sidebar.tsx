@@ -61,7 +61,9 @@ export default function Sidebar() {
   } = useAppContext()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isResponsiveSidebar, setIsResponsiveSidebar] = useState(false)
+  const [suppressCollapsedLogoToggle, setSuppressCollapsedLogoToggle] = useState(false)
   const isCollapsed = !isOpen
+  const canRevealCollapsedLogoToggle = isCollapsed && !suppressCollapsedLogoToggle
 
   const menuItems = [
     { icon: BarChart3, label: t('dashboard'), href: '/dashboard', shortcut: undefined },
@@ -228,10 +230,11 @@ export default function Sidebar() {
       >
         <div
           className="group/sidebar-logo border-b border-sidebar-border p-4"
+          onMouseLeave={() => setSuppressCollapsedLogoToggle(false)}
           tabIndex={isCollapsed ? 0 : -1}
         >
           <div className={`relative flex h-10 items-center ${isCollapsed ? 'justify-center' : 'justify-between gap-2'}`}>
-            <div className={`${isCollapsed ? 'absolute left-1/2 flex h-10 w-10 -translate-x-1/2 items-center justify-center transition-opacity duration-150 group-hover/sidebar-logo:opacity-0 group-focus/sidebar-logo:opacity-0' : 'min-w-10'}`}>
+            <div className={`${isCollapsed ? `absolute left-1/2 flex h-10 w-10 -translate-x-1/2 items-center justify-center transition-opacity duration-150 ${canRevealCollapsedLogoToggle ? 'group-hover/sidebar-logo:opacity-0 group-focus/sidebar-logo:opacity-0' : 'opacity-100'}` : 'min-w-10'}`}>
               <AuditFlowLogo
                 collapsed={isCollapsed}
                 className={isCollapsed ? "justify-center" : ""}
@@ -243,10 +246,13 @@ export default function Sidebar() {
               onClick={(event) => {
                 if (isAppLoading) return
                 event.currentTarget.blur()
-                setIsOpen((open) => !open)
+                setIsOpen((open) => {
+                  if (open) setSuppressCollapsedLogoToggle(true)
+                  return !open
+                })
               }}
               disabled={isAppLoading}
-              className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground transition-opacity duration-200 hover:bg-sidebar-accent disabled:cursor-wait xl:inline-flex ${isCollapsed ? 'absolute left-1/2 -translate-x-1/2 opacity-0 group-hover/sidebar-logo:opacity-100 group-focus/sidebar-logo:opacity-100' : 'opacity-100'}`}
+              className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground transition-opacity duration-200 hover:bg-sidebar-accent disabled:cursor-wait xl:inline-flex ${isCollapsed ? `absolute left-1/2 -translate-x-1/2 opacity-0 ${canRevealCollapsedLogoToggle ? 'group-hover/sidebar-logo:opacity-100 group-focus/sidebar-logo:opacity-100' : ''}` : 'opacity-100'}`}
               aria-label={withShortcut(t('toggleSidebar'), 'sidebar')}
               title={withShortcut(t('toggleSidebar'), 'sidebar')}
             >
