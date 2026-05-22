@@ -40,7 +40,7 @@ const defaultFrom = "AuditNett <noreply@ggraphsystems.com>"
 const getFromEmail = () => process.env.RESEND_FROM_EMAIL || defaultFrom
 
 export const getAppUrl = () =>
-  (process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` || "http://localhost:3000").replace(/\/$/, "")
+  (process.env.NEXT_PUBLIC_APP_URL || "https://auditnett.com").replace(/\/$/, "")
 
 const escapeHtml = (value: string) =>
   value
