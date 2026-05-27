@@ -302,7 +302,7 @@ const workflowSteps = [
   {
     title: "Complete report",
     eyebrow: "Step 03",
-    description: "The completed audit exports to CSV/PDF and becomes the inventory’s new stock snapshot.",
+    description: "The completed audit exports to CSV/PDF and becomes the inventory's new stock snapshot.",
     metric: "100%",
   },
 ]
@@ -390,23 +390,23 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <BlurFadeIn className="relative mx-auto mt-12 max-w-6xl overflow-hidden" delay={0.16}>
-              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-background to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-background to-transparent" />
-              <div className="auditnett-infinite-solutions flex w-max gap-4 py-2 hover:[animation-play-state:paused]">
+            <BlurFadeIn className="relative mx-auto mt-10 max-w-4xl overflow-hidden px-8 sm:px-12" delay={0.16}>
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-background to-transparent sm:w-28" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-background to-transparent sm:w-28" />
+              <div className="auditnett-infinite-solutions flex w-max gap-3 py-2" aria-label="Solutions served by AuditNett">
                 {[...solutionCarouselItems, ...solutionCarouselItems].map((solution, index) => {
                   const Icon = solution.icon
                   return (
-                    <Link
+                    <div
                       key={`${solution.title}-${index}`}
-                      href={solution.href}
-                      className="group flex h-28 w-64 shrink-0 items-center gap-4 rounded-2xl border border-border bg-card/80 p-5 text-left shadow-sm backdrop-blur transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10"
+                      aria-hidden={index >= solutionCarouselItems.length}
+                      className="flex h-20 w-52 shrink-0 cursor-default items-center gap-3 rounded-xl border border-border bg-card/80 px-4 py-3 text-left shadow-sm backdrop-blur"
                     >
-                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                        <Icon size={26} className="text-primary transition-transform group-hover:scale-110" />
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Icon size={21} className="text-primary" />
                       </span>
-                      <span className="text-lg font-semibold text-foreground">{solution.title}</span>
-                    </Link>
+                      <span className="text-sm font-semibold text-foreground sm:text-base">{solution.title}</span>
+                    </div>
                   )
                 })}
               </div>
@@ -627,7 +627,7 @@ export default function LandingPage() {
                     <span className="h-3 w-3 rounded-full bg-emerald-500" />
                   </div>
                   <div className="rounded-md border border-border bg-secondary/30 px-3 py-1 text-xs text-muted-foreground">
-                    Workflow video
+                    Workflow preview
                   </div>
                 </div>
                 <div className="grid gap-0 xl:grid-cols-[220px_1fr]">
@@ -646,8 +646,7 @@ export default function LandingPage() {
                         key={step.title}
                         type="button"
                         onClick={() => setWorkflowStep(index)}
-                        className={`mb-2 w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${workflowStep === index ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                          }`}
+                        className={`mb-2 w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${workflowStep === index ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"}`}
                       >
                         {step.title}
                       </button>
