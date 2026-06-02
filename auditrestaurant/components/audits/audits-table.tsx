@@ -138,7 +138,7 @@ export default function AuditsTable({ audits, onUpdateAudit, onDeleteAudit }: Au
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{audit.inventoryName}</p>
-                      <p className="text-xs text-muted-foreground">{audit.totalItems} items</p>
+                      <p className="text-xs text-muted-foreground">{audit.totalItems} itemsss</p>
                     </div>
                   </div>
                 </td>
