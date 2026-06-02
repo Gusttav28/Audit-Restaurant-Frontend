@@ -17,6 +17,7 @@ import {
   initialRestaurants,
 } from "@/components/inventory/multi-restaurant-data"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { hasSupabaseBrowserEnv } from "@/lib/supabase/config"
 import type { Database } from "@/lib/supabase/database.types"
 
 export type CurrencyCode = "USD" | "CRC"
@@ -823,7 +824,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [exchangeRate, setExchangeRate] = useState(DEFAULT_USD_CRC_RATE)
   const [converterAmount, setConverterAmount] = useState(1)
   const [selectedInventoryId, setSelectedInventoryId] = useState<number | null>(initialRestaurants[0].inventoryTypes[0]?.id ?? null)
-  const [isLoadingSupabaseData, setIsLoadingSupabaseData] = useState(hasAuthTransition && shouldLoadAppData)
+  const [isLoadingSupabaseData, setIsLoadingSupabaseData] = useState(hasSupabaseBrowserEnv && hasAuthTransition && shouldLoadAppData)
   const [isRouteLoading, setIsRouteLoading] = useState(false)
   const [routeLoadingStartPath, setRouteLoadingStartPath] = useState<string | null>(null)
   const [requestLoadingMessage, setRequestLoadingMessage] = useState<string | null>(null)
@@ -831,8 +832,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentUserName, setCurrentUserName] = useState("Admin")
   const [currentUserEmail, setCurrentUserEmail] = useState("")
   const [authUserId, setAuthUserId] = useState<string | null>(null)
-  const [isAuthReady, setIsAuthReady] = useState(false)
-  const [hasLoadedSupabaseData, setHasLoadedSupabaseData] = useState(false)
+  const [isAuthReady, setIsAuthReady] = useState(!hasSupabaseBrowserEnv)
+  const [hasLoadedSupabaseData, setHasLoadedSupabaseData] = useState(!hasSupabaseBrowserEnv)
 
   const selectedRestaurant =
     restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ?? restaurants[0] ?? initialRestaurants[0]
@@ -972,6 +973,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (!hasSupabaseBrowserEnv) {
+      setAuthUserId(null)
+      setIsAuthReady(true)
+      return
+    }
+
     const supabase = createSupabaseDataClient()
     let isMounted = true
 
@@ -994,6 +1001,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (!hasSupabaseBrowserEnv) {
+      setHasLoadedSupabaseData(true)
+      setIsLoadingSupabaseData(false)
+      window.sessionStorage.removeItem("auditflow-auth-transition")
+      return
+    }
+
     let isMounted = true
     const cacheKey = authUserId ? `app:${authUserId}` : null
 

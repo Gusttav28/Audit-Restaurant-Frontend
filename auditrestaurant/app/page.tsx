@@ -41,6 +41,7 @@ import PublicNavbar from "@/components/public/public-navbar"
 import { BlurFadeIn, TextBlurFadeIn } from "@/components/ui/text-blur-fade-in"
 import WorldMap from "@/components/ui/world-map"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { hasSupabaseBrowserEnv } from "@/lib/supabase/config"
 
 const capabilities = [
   "Multi-restaurant switching",
@@ -153,7 +154,7 @@ const workflowDropdownItems = [
 
 const pricingDropdownItems = [
   { icon: Package, title: "Plans", href: "/subscription" },
-  { icon: Check, title: "Compare Features", href: "/#features" },
+  { icon: Check, title: "Compare Features", href: "/#compare-features" },
   { icon: CreditCard, title: "Subscription", href: "/subscription" },
   { icon: HelpCircle, title: "FAQ", href: "/docs" },
 ]
@@ -186,6 +187,57 @@ const technologies = [
   "Recharts",
   "shadcn/Radix UI",
   "Aceternity UI",
+]
+
+const planComparison = [
+  {
+    feature: "Best for",
+    basic: "Solo operators getting organized",
+    professional: "Growing teams running weekly audits",
+    enterprise: "Multi-location operations",
+  },
+  {
+    feature: "Inventories",
+    basic: "2 inventories",
+    professional: "Unlimited inventories",
+    enterprise: "Unlimited inventories",
+  },
+  {
+    feature: "Items per inventory",
+    basic: "50 items",
+    professional: "Unlimited items",
+    enterprise: "Unlimited items",
+  },
+  {
+    feature: "Audit history",
+    basic: "30 days",
+    professional: "1 year",
+    enterprise: "Unlimited",
+  },
+  {
+    feature: "Reports and analytics",
+    basic: "Basic reports",
+    professional: "Advanced analytics",
+    enterprise: "Advanced analytics + custom exports",
+  },
+  {
+    feature: "Team access",
+    basic: "1 user",
+    professional: "Up to 5 users",
+    enterprise: "Unlimited team members",
+  },
+  {
+    feature: "Customization",
+    basic: "Standard categories",
+    professional: "Custom units and categories",
+    enterprise: "Custom integrations and API access",
+  },
+  {
+    feature: "Support",
+    basic: "Email support",
+    professional: "Priority support",
+    enterprise: "24/7 support + account manager",
+  },
 ]
 
 function TechnologyLogo({ name }: { name: string }) {
@@ -335,6 +387,8 @@ export default function LandingPage() {
     ) : null
 
   useEffect(() => {
+    if (!hasSupabaseBrowserEnv) return
+
     let mounted = true
     createSupabaseBrowserClient().auth.getSession().then(({ data }) => {
       if (mounted) setIsLoggedIn(Boolean(data.session))
@@ -719,6 +773,68 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="compare-features" className="border-y border-border bg-card/30 px-4 py-24 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-3xl">
+                <p className="text-sm font-medium text-primary">Compare features</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  Pick the plan that matches how your restaurant team audits.
+                </h2>
+                <p className="mt-5 text-muted-foreground">
+                  Basic covers a small inventory workflow, Professional opens up team operations, and Enterprise adds the controls larger groups expect.
+                </p>
+              </div>
+              <Link href="/subscription" className="inline-flex">
+                <Button className="gap-2">
+                  View plans
+                  <ArrowRight size={16} />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="mt-10 hidden overflow-hidden rounded-xl border border-border bg-background md:block">
+              <div className="grid grid-cols-[1.15fr_repeat(3,1fr)] border-b border-border bg-card/70 text-sm font-medium text-foreground">
+                <div className="px-4 py-4">Feature</div>
+                <div className="px-4 py-4">Basic</div>
+                <div className="border-x border-border px-4 py-4">Professional</div>
+                <div className="px-4 py-4">Enterprise</div>
+              </div>
+              {planComparison.map((row) => (
+                <div key={row.feature} className="grid grid-cols-[1.15fr_repeat(3,1fr)] border-b border-border text-sm last:border-b-0">
+                  <div className="bg-card/35 px-4 py-4 font-medium text-foreground">{row.feature}</div>
+                  <div className="px-4 py-4 text-muted-foreground">{row.basic}</div>
+                  <div className="border-x border-border bg-primary/5 px-4 py-4 text-foreground">{row.professional}</div>
+                  <div className="px-4 py-4 text-muted-foreground">{row.enterprise}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10 grid gap-3 md:hidden">
+              {["Basic", "Professional", "Enterprise"].map((plan) => (
+                <div key={plan} className="rounded-xl border border-border bg-background p-4">
+                  <h3 className="font-semibold text-foreground">{plan}</h3>
+                  <div className="mt-3 space-y-3 text-sm">
+                    {planComparison.map((row) => {
+                      const value = plan === "Basic" ? row.basic : plan === "Professional" ? row.professional : row.enterprise
+
+                      return (
+                        <div key={`${plan}-${row.feature}`} className="flex gap-3">
+                          <Check size={15} className="mt-0.5 shrink-0 text-primary" />
+                          <p>
+                            <span className="font-medium text-foreground">{row.feature}: </span>
+                            <span className="text-muted-foreground">{value}</span>
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

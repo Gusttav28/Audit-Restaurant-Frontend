@@ -35,6 +35,7 @@ import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import { Button } from "@/components/ui/button"
 import { isMacPlatform, shouldIgnoreShortcut, withShortcut } from "@/components/layout/shortcut-utils"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { hasSupabaseBrowserEnv } from "@/lib/supabase/config"
 
 const platformDropdownFeatures = [
   { icon: Database, title: "Inventory Database", href: "/features/inventory-database" },
@@ -70,7 +71,7 @@ const solutionDropdownColumns = [
 
 const pricingDropdownItems = [
   { icon: Package, title: "Plans", href: "/subscription" },
-  { icon: Check, title: "Compare Features", href: "/#features" },
+  { icon: Check, title: "Compare Features", href: "/#compare-features" },
   { icon: CreditCard, title: "Subscription", href: "/subscription" },
   { icon: HelpCircle, title: "FAQ", href: "/docs" },
 ]
@@ -153,6 +154,8 @@ export default function PublicNavbar() {
   const appCta = isLoggedIn ? "Open dashboard" : "Start your workspace"
 
   useEffect(() => {
+    if (!hasSupabaseBrowserEnv) return
+
     let mounted = true
     createSupabaseBrowserClient().auth.getSession().then(({ data }) => {
       if (mounted) setIsLoggedIn(Boolean(data.session))

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import DottedMap from "dotted-map"
 import { motion } from "motion/react"
 import { useTheme } from "next-themes"
@@ -16,8 +16,13 @@ interface MapProps {
 
 export default function WorldMap({ dots = [], lineColor = "#0f6cb4", className = "" }: MapProps) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const [mounted, setMounted] = useState(false)
   const { resolvedTheme, theme } = useTheme()
-  const isDark = (resolvedTheme ?? theme) === "dark"
+  const isDark = !mounted || (resolvedTheme ?? theme) === "dark"
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const svgMap = useMemo(() => {
     const map = new DottedMap({ height: 100, grid: "diagonal" })

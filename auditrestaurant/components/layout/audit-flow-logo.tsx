@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 
 const DARK_BLUE_LOGO_FOR_LIGHT_MODE = "/audit-coflow-logo-dark.jpg"
@@ -19,9 +20,14 @@ export default function AuditFlowLogo({
   imageClassName = "h-9 w-9 rounded-lg",
   textClassName = "text-sidebar-foreground",
 }: AuditFlowLogoProps) {
+  const [mounted, setMounted] = useState(false)
   const { resolvedTheme, theme } = useTheme()
   const activeTheme = resolvedTheme ?? theme
-  const logoSrc = activeTheme === "dark" ? WHITE_LOGO_FOR_DARK_MODE : DARK_BLUE_LOGO_FOR_LIGHT_MODE
+  const logoSrc = mounted && activeTheme === "light" ? DARK_BLUE_LOGO_FOR_LIGHT_MODE : WHITE_LOGO_FOR_DARK_MODE
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <div className={`flex min-w-0 items-center gap-2 ${className}`}>
