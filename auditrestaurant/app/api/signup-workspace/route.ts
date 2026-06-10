@@ -2,6 +2,9 @@ import { NextResponse } from "next/server"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 
 const fullPermissions = { read: true, audit: true, create: true, edit: true, delete: true }
+const SIGNUP_WINDOW_MS = 15 * 60 * 1000
+const SIGNUP_MAX_ATTEMPTS = 5
+const signupAttempts = new Map<string, { count: number; resetAt: number }>()
 
 const defaultRestaurantSettings = {
   auditNotifications: true,
@@ -11,6 +14,26 @@ const defaultRestaurantSettings = {
 }
 
 const hasValidPassword = (password: string) => password.length >= 8 && /[A-Z]/.test(password) && /\d/.test(password)
+const hasValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+const getClientIp = (request: Request) => {
+  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+  return forwardedFor || request.headers.get("x-real-ip") || "unknown"
+}
+
+const assertSignupRateLimit = (key: string) => {
+  const now = Date.now()
+  const current = signupAttempts.get(key)
+  if (!current || current.resetAt <= now) {
+    signupAttempts.set(key, { count: 1, resetAt: now + SIGNUP_WINDOW_MS })
+    return true
+  }
+
+  if (current.count >= SIGNUP_MAX_ATTEMPTS) return false
+  current.count += 1
+  signupAttempts.set(key, current)
+  return true
+}
 
 export async function POST(request: Request) {
   try {
@@ -19,10 +42,20 @@ export async function POST(request: Request) {
     const email = String(body.email ?? "").trim().toLowerCase()
     const password = String(body.password ?? "")
     const company = String(body.company ?? "").trim()
+    const botField = String(body.website ?? body.companyWebsite ?? "").trim()
     const workspaceName = company || `${name || email.split("@")[0]}'s Restaurant`
 
-    if (!name || !email || !hasValidPassword(password)) {
+    if (botField) {
+      return NextResponse.json({ error: "Invalid signup request" }, { status: 400 })
+    }
+
+    if (!name || !hasValidEmail(email) || !hasValidPassword(password)) {
       return NextResponse.json({ error: "Missing signup fields" }, { status: 400 })
+    }
+
+    const rateLimitKey = `${getClientIp(request)}:${email}`
+    if (!assertSignupRateLimit(rateLimitKey)) {
+      return NextResponse.json({ error: "Too many signup attempts. Please try again later." }, { status: 429 })
     }
 
     const admin = createSupabaseAdminClient() as any
