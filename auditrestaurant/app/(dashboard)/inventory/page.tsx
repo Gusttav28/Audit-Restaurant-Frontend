@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Package, Plus, Settings, Store, TriangleAlert } from "lucide-react"
+import { AlertCircle, CircleDollarSign, Package, Plus, Settings, Store, TriangleAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Header from "@/components/layout/header"
@@ -216,7 +216,7 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card
               className={`bg-card border-border cursor-pointer transition-colors hover:border-accent/50 ${focusedView === "all" ? "border-accent/60" : ""}`}
               onClick={() => {
@@ -227,7 +227,10 @@ export default function InventoryPage() {
               }}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">{t("restaurantItems")}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Package size={16} />
+                  {t("restaurantItems")}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-foreground">{allRestaurantItems.length}</p>
@@ -239,7 +242,10 @@ export default function InventoryPage() {
               onClick={() => setFocusedView(focusedView === "low" ? "all" : "low")}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">{t("lowStock")}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <TriangleAlert size={16} className="text-destructive" />
+                  {t("lowStock")}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-destructive">
@@ -253,7 +259,10 @@ export default function InventoryPage() {
               onClick={() => setFocusedView(focusedView === "expiring" ? "all" : "expiring")}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">{t("expiringSoon")}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <AlertCircle size={16} className="text-primary" />
+                  {t("expiringSoon")}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-primary">
@@ -264,7 +273,10 @@ export default function InventoryPage() {
             </Card>
             <Card className="bg-card border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">{t("inventoryValue")}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CircleDollarSign size={16} />
+                  {t("inventoryValue")}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="min-w-0 break-words text-xl font-bold leading-tight text-foreground sm:text-2xl">
@@ -275,7 +287,7 @@ export default function InventoryPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {typeStats.map((type) => (
               <button
                 key={type.id}
@@ -283,32 +295,24 @@ export default function InventoryPage() {
                   setSelectedTypeId(type.id)
                   setFocusedView("inventory")
                 }}
-                className={`rounded-lg border p-4 text-left transition-colors ${
+                className={`rounded-lg border p-6 text-left transition-colors ${
                   selectedType?.id === type.id
                     ? "border-primary bg-primary/10"
                     : "border-border bg-card hover:bg-secondary/30"
                 }`}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: type.color }} />
-                    <span className="truncate font-semibold text-foreground">{type.name}</span>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="h-4 w-4 shrink-0 rounded-full" style={{ backgroundColor: type.color }} />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">{type.name}</p>
+                      <p className="text-xs text-muted-foreground">{type.totalItems} {t("items")}</p>
+                    </div>
                   </div>
-                  <Package size={18} className="text-muted-foreground" />
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                  <span>
-                    <strong className="block text-lg text-foreground">{type.totalItems}</strong>
-                    {t("items")}
-                  </span>
-                  <span>
-                    <strong className="block text-lg text-destructive">{type.lowStock}</strong>
-                    {t("alerts")}
-                  </span>
-                  <span>
-                    <strong className="block break-words text-base leading-tight text-foreground sm:text-lg">{formatCurrency(type.value)}</strong>
-                    {t("value")}
-                  </span>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-medium text-foreground">{type.lowStock} {t("alerts")}</p>
+                    <p className="text-xs text-accent">{formatCurrency(type.value)}</p>
+                  </div>
                 </div>
               </button>
             ))}
