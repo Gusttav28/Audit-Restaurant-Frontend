@@ -11,11 +11,12 @@ import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
 import AuditFlowLogo from '@/components/layout/audit-flow-logo'
 import { useAppContext } from '@/components/app-context'
+import { exportDocumentPdf, exportDocumentXlsx, slugifyFilePart, type ExportDocument } from '@/lib/document-export'
 
 export default function AuditDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params)
   const router = useRouter()
-  const { selectedRestaurant, updateAuditItem, completeAudit, reopenAudit, addAuditComment, formatCurrency, clearRequestLoading, can, t } = useAppContext()
+  const { selectedRestaurant, updateAuditItem, completeAudit, reopenAudit, addAuditComment, formatCurrency, clearRequestLoading, can, t, language } = useAppContext()
   const audit = selectedRestaurant.audits.find((candidate) => candidate.id === id)
   const [searchTerm, setSearchTerm] = useState('')
   const [draftValues, setDraftValues] = useState<Record<number, string>>({})
@@ -24,7 +25,7 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [isAddingComment, setIsAddingComment] = useState(false)
   const [isSavingComment, setIsSavingComment] = useState(false)
-  const [isExporting, setIsExporting] = useState<null | 'csv' | 'pdf'>(null)
+  const [isExporting, setIsExporting] = useState<null | 'xlsx' | 'pdf'>(null)
   const [isCompletingAudit, setIsCompletingAudit] = useState(false)
   const [completionMessage, setCompletionMessage] = useState(false)
   const [commentText, setCommentText] = useState('')
@@ -113,6 +114,46 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
   }, {}))
   const comments = audit.comments ?? []
   const canAudit = can('audit')
+  const exportCopy = {
+    en: {
+      title: 'AuditNett export',
+      organizationSubtitle: 'Restaurant inventory operations',
+      auditId: 'Audit ID',
+      issued: 'Issued',
+      sheetName: 'Audit',
+      created: 'Created',
+      completed: 'Completed',
+      itemsAudited: 'Items audited',
+      items: 'Items',
+      soldValue: 'Sold value',
+      discrepancyValue: 'Discrepancy value',
+      previous: 'Previous',
+      current: 'Current',
+      previousStockValue: 'Previous stock value',
+      currentStockValue: 'Current stock value',
+      exportNote: 'Export note',
+      exportNoteBody: 'This export reflects the audit state and filters available at the moment the file was generated.',
+    },
+    es: {
+      title: 'Exportacion AuditNett',
+      organizationSubtitle: 'Operaciones de inventario de restaurantes',
+      auditId: 'ID de auditoria',
+      issued: 'Emitido',
+      sheetName: 'Auditoria',
+      created: 'Creada',
+      completed: 'Completada',
+      itemsAudited: 'Articulos auditados',
+      items: 'Articulos',
+      soldValue: 'Valor vendido',
+      discrepancyValue: 'Valor de discrepancia',
+      previous: 'Anterior',
+      current: 'Actual',
+      previousStockValue: 'Valor de stock anterior',
+      currentStockValue: 'Valor de stock actual',
+      exportNote: 'Nota de exportacion',
+      exportNoteBody: 'Esta exportacion refleja el estado de la auditoria y los filtros disponibles al momento de generar el archivo.',
+    },
+  }[language]
 
   const handleSaveItem = (itemId: number) => {
     const item = items.find((candidate) => candidate.itemId === itemId)
@@ -183,11 +224,11 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
     }, 250)
   }
 
-  const handleExport = (type: 'csv' | 'pdf') => {
+  const handleExport = (type: 'xlsx' | 'pdf') => {
     setIsExporting(type)
     window.setTimeout(() => {
-      if (type === 'csv') exportCsv()
-      if (type === 'pdf') exportPdf()
+      if (type === 'xlsx') exportDocumentXlsx(buildExportDocument(), `${exportBaseName()}.xlsx`)
+      if (type === 'pdf') exportDocumentPdf(buildExportDocument(), `${exportBaseName()}.pdf`)
       setIsExporting(null)
     }, 300)
   }
@@ -223,87 +264,72 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
     currentStock: item.currentStock ?? '',
     unit: item.unit,
     difference: item.difference ?? '',
-    result: item.result,
+    result: item.result === 'sold' ? t('sold') : item.result === 'discrepancy' ? t('discrepancy') : item.result === 'matched' ? t('matched') : t('pending'),
     unitPrice: item.unitPrice,
     salesImpact: Math.max(item.difference ?? 0, 0) * item.unitPrice,
     discrepancyImpact: Math.abs(Math.min(item.difference ?? 0, 0)) * item.unitPrice,
   }))
 
-  const downloadBlob = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
   const exportBaseName = () => {
-    const normalize = (value: string) => value.trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")
     const date = audit.completedDate ?? audit.createdDate
-    return `AuditCoflow_Restaurant-${normalize(selectedRestaurant.name)}_Inventory-${normalize(audit.inventoryName)}_${normalize(audit.id)}_${date}`
+    return `AuditNett_Restaurant-${slugifyFilePart(selectedRestaurant.name)}_Inventory-${slugifyFilePart(audit.inventoryName)}_${slugifyFilePart(audit.id)}_${date}`
   }
 
-  const exportCsv = () => {
-    const headers = ['Item', 'Category', 'Phase', 'Merma Quantity', 'Production Quantity', 'Previous Stock', 'Current Stock', 'Unit', 'Difference', 'Result', 'Unit Price', 'Sales Impact', 'Discrepancy Impact']
-    const rows = auditRows.map((row) => [
-      row.item,
-      row.category,
-      row.phase,
-      row.mermaQuantity,
-      row.productionQuantity,
-      row.previousStock,
-      row.currentStock,
-      row.unit,
-      row.difference,
-      row.result,
-      row.unitPrice,
-      row.salesImpact,
-      row.discrepancyImpact,
-    ])
-    const csv = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','))
-      .join('\n')
-    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `${exportBaseName()}.csv`)
-  }
+  const buildExportDocument = (): ExportDocument<typeof auditRows[number]> => {
+    const netMovement = salesImpact - discrepancyImpact
 
-  const exportPdf = () => {
-    const lines = [
-      `${audit.id} - ${audit.inventoryName}`,
-      `Date: ${audit.createdDate}`,
-      `Auditor: ${audit.auditor}`,
-      `Items audited: ${countedItems}/${totalInventoryItems}`,
-      `Sold value: ${formatCurrency(salesImpact)}`,
-      `Discrepancy value: ${formatCurrency(discrepancyImpact)}`,
-      '',
-      ...auditRows.map((row) =>
-        `${row.item} | ${row.phase} | merma ${row.mermaQuantity} | production ${row.productionQuantity} | previous ${row.previousStock} ${row.unit} | current ${row.currentStock} ${row.unit} | difference ${row.difference} | ${row.result} | sold ${formatCurrency(row.salesImpact)} | discrepancy ${formatCurrency(row.discrepancyImpact)}`,
-      ),
-    ]
-    const escaped = lines.join('\n').replace(/[()\\]/g, '\\$&')
-    const stream = `BT /F1 10 Tf 40 780 Td 12 TL (${escaped.replace(/\n/g, ') Tj T* (')}) Tj ET`
-    const objects = [
-      '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
-      '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
-      '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj',
-      '4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
-      `5 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`,
-    ]
-    let pdf = '%PDF-1.4\n'
-    const offsets = [0]
-    objects.forEach((object) => {
-      offsets.push(pdf.length)
-      pdf += `${object}\n`
-    })
-    const xrefStart = pdf.length
-    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
-    offsets.slice(1).forEach((offset) => {
-      pdf += `${String(offset).padStart(10, '0')} 00000 n \n`
-    })
-    pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`
-    downloadBlob(new Blob([pdf], { type: 'application/pdf' }), `${exportBaseName()}.pdf`)
+    return {
+      title: exportCopy.title,
+      subtitle: `${selectedRestaurant.name} - ${audit.inventoryName}`,
+      organizationName: 'AuditNett',
+      organizationSubtitle: exportCopy.organizationSubtitle,
+      referenceLabel: exportCopy.auditId,
+      referenceValue: audit.id,
+      issuedAt: audit.completedDate ?? audit.createdDate,
+      issuedLabel: exportCopy.issued,
+      footerLabel: exportCopy.title,
+      sheetName: exportCopy.sheetName,
+      details: [
+        { label: t('restaurant'), value: selectedRestaurant.name },
+        { label: t('inventory'), value: audit.inventoryName },
+        { label: exportCopy.created, value: audit.createdDate },
+        { label: exportCopy.completed, value: audit.completedDate ?? '-' },
+        { label: t('auditor'), value: audit.auditor },
+        { label: t('status'), value: displayStatus === 'completed' ? t('completed') : t('inProgress') },
+        { label: exportCopy.itemsAudited, value: `${countedItems}/${totalInventoryItems}` },
+        { label: t('complianceRate'), value: `${audit.compliance}%` },
+      ],
+      metrics: [
+        { label: exportCopy.items, value: `${countedItems}/${totalInventoryItems}` },
+        { label: exportCopy.soldValue, value: formatCurrency(salesImpact) },
+        { label: t('discrepancy'), value: formatCurrency(discrepancyImpact) },
+        { label: t('netMovement'), value: formatCurrency(netMovement) },
+      ],
+      columns: [
+        { key: 'item', header: t('itemName'), width: 24 },
+        { key: 'category', header: t('category'), width: 16 },
+        { key: 'phase', header: t('itemPhase'), width: 18 },
+        { key: 'previousStock', header: exportCopy.previous, width: 12, align: 'right' },
+        { key: 'currentStock', header: exportCopy.current, width: 12, align: 'right' },
+        { key: 'unit', header: t('unit'), width: 8 },
+        { key: 'difference', header: t('difference'), width: 12, align: 'right' },
+        { key: 'result', header: t('result'), width: 13 },
+        { key: 'salesImpact', header: t('salesImpact'), width: 14, align: 'right' },
+        { key: 'discrepancyImpact', header: t('discrepancy'), width: 14, align: 'right' },
+      ],
+      rows: auditRows,
+      summary: [
+        { label: exportCopy.previousStockValue, value: formatCurrency(previousValue) },
+        { label: exportCopy.currentStockValue, value: formatCurrency(countedValue) },
+        { label: exportCopy.soldValue, value: formatCurrency(salesImpact) },
+        { label: exportCopy.discrepancyValue, value: formatCurrency(discrepancyImpact) },
+        { label: t('netMovement'), value: formatCurrency(netMovement), emphasis: true },
+      ],
+      note: {
+        title: exportCopy.exportNote,
+        body: exportCopy.exportNoteBody,
+      },
+    }
   }
 
   return (
@@ -743,9 +769,9 @@ export default function AuditDetailPage({ params }: { params: Promise<{ id: stri
 
               <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:justify-between">
                 <div className="grid grid-cols-2 gap-2 sm:flex">
-                  <Button variant="outline" className="gap-2 bg-transparent" onClick={() => handleExport('csv')} disabled={Boolean(isExporting)}>
-                    {isExporting === 'csv' ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                    {isExporting === 'csv' ? t('exporting') : 'CSV'}
+                  <Button variant="outline" className="gap-2 bg-transparent" onClick={() => handleExport('xlsx')} disabled={Boolean(isExporting)}>
+                    {isExporting === 'xlsx' ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    {isExporting === 'xlsx' ? t('exporting') : 'XLSX'}
                   </Button>
                   <Button variant="outline" className="gap-2 bg-transparent" onClick={() => handleExport('pdf')} disabled={Boolean(isExporting)}>
                     {isExporting === 'pdf' ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}

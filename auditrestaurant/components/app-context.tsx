@@ -9,6 +9,7 @@ import {
   type CustomUnit,
   type AppPermissions,
   type InventoryItem,
+  type ProviderBill,
   type RestaurantAudit,
   type RestaurantAuditComment,
   type RestaurantAuditItem,
@@ -299,6 +300,15 @@ const dictionary = {
     typeAuditId: "Type audit ID",
     saveAll: "Save All",
     suppliers: "Suppliers",
+    providers: "Providers",
+    provider: "Provider",
+    providerList: "Provider List",
+    providerListSubtitle: "Manage suppliers, provided items, and uploaded bills",
+    addProvider: "Add Provider",
+    providerItems: "Provided items",
+    uploadedBills: "Uploaded bills",
+    noProviders: "No providers registered yet.",
+    search: "Search",
     registerSupplier: "Register supplier",
     supplierName: "Supplier name",
     saveSupplier: "Save supplier",
@@ -584,6 +594,15 @@ const dictionary = {
     typeAuditId: "Escribe el ID de auditoría",
     saveAll: "Guardar Todo",
     suppliers: "Proveedores",
+    providers: "Proveedores",
+    provider: "Proveedor",
+    providerList: "Lista de Proveedores",
+    providerListSubtitle: "Gestiona proveedores, articulos suministrados y facturas cargadas",
+    addProvider: "Agregar Proveedor",
+    providerItems: "Articulos suministrados",
+    uploadedBills: "Facturas cargadas",
+    noProviders: "Aun no hay proveedores registrados.",
+    search: "Buscar",
     registerSupplier: "Registrar proveedor",
     supplierName: "Nombre del proveedor",
     saveSupplier: "Guardar proveedor",
@@ -644,7 +663,9 @@ interface AppContextValue {
   renameItemCategory: (inventoryTypeId: number, oldCategory: string, nextCategory: string) => void
   deleteItemCategory: (inventoryTypeId: number, category: string) => void
   addSupplier: (supplier: string) => void
+  renameSupplier: (oldSupplier: string, nextSupplier: string) => void
   deleteSupplier: (supplier: string) => void
+  addProviderBill: (bill: Omit<ProviderBill, "id" | "uploadedAt"> & { id?: string; uploadedAt?: string }) => void
   addCustomUnit: (unit: Omit<CustomUnit, "id">) => void
   deleteCustomUnit: (id: number) => void
   createAudit: (audit: { inventoryId: number; auditor: string; auditorId?: string; notes: string; auditDate: string; helperName?: string; temporaryHelperName?: string }, options?: { keepLoading?: boolean }) => Promise<string | null>
@@ -810,7 +831,7 @@ const writePersistentAppDataCache = (cacheKey: string, cached: CachedAppData) =>
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const shouldLoadAppData = ["/dashboard", "/inventory", "/audits", "/reports", "/assigned-work", "/team", "/settings", "/profile"].some((route) =>
+  const shouldLoadAppData = ["/dashboard", "/inventory", "/providers", "/audits", "/reports", "/assigned-work", "/team", "/settings", "/profile"].some((route) =>
     pathname.startsWith(route),
   )
   const hasAuthTransition = typeof window !== "undefined" && window.sessionStorage.getItem("auditflow-auth-transition") === "login"
@@ -1604,6 +1625,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         customUnits: [],
         itemCategories: [],
         suppliers: [],
+        providerBills: [],
         audits: [],
         teamMembers: [{
           id: createdMember.id,
@@ -2074,11 +2096,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })()
   }
 
+  const renameSupplier = (oldSupplier: string, nextSupplier: string) => {
+    if (!can("edit")) return
+    const currentName = oldSupplier.trim()
+    const nextName = nextSupplier.trim()
+    if (!currentName || !nextName || currentName === nextName) return
+
+    updateSelectedRestaurant((restaurant) => ({
+      ...restaurant,
+      suppliers: Array.from(new Set((restaurant.suppliers ?? []).map((supplier) => supplier === currentName ? nextName : supplier))),
+      providerBills: (restaurant.providerBills ?? []).map((bill) =>
+        bill.supplier === currentName ? { ...bill, supplier: nextName } : bill,
+      ),
+      inventoryTypes: restaurant.inventoryTypes.map((type) => ({
+        ...type,
+        items: type.items.map((item) =>
+          item.supplier === currentName ? { ...item, supplier: nextName } : item,
+        ),
+      })),
+    }))
+
+    if (!selectedRestaurant.remoteId) return
+
+    void (async () => {
+      const supabase = createSupabaseDataClient()
+      const { data: supplierRow, error: supplierLookupError } = await supabase
+        .from("suppliers")
+        .select("id")
+        .eq("restaurant_id", selectedRestaurant.remoteId)
+        .eq("name", currentName)
+        .maybeSingle()
+      if (supplierLookupError) {
+        syncError("supplier lookup", supplierLookupError)
+        return
+      }
+
+      if (supplierRow?.id) {
+        const { error } = await supabase
+          .from("suppliers")
+          .update({ name: nextName })
+          .eq("id", supplierRow.id)
+        if (error) syncError("supplier rename", error)
+      }
+
+      const { error: itemError } = await supabase
+        .from("inventory_items")
+        .update({ supplier_name: nextName })
+        .eq("restaurant_id", selectedRestaurant.remoteId)
+        .eq("supplier_name", currentName)
+      if (itemError) syncError("supplier item rename", itemError)
+    })()
+  }
+
   const deleteSupplier = (supplier: string) => {
     if (!can("delete")) return
     updateSelectedRestaurant((restaurant) => ({
       ...restaurant,
       suppliers: (restaurant.suppliers ?? []).filter((existingSupplier) => existingSupplier !== supplier),
+      providerBills: (restaurant.providerBills ?? []).filter((bill) => bill.supplier !== supplier),
       inventoryTypes: restaurant.inventoryTypes.map((type) => ({
         ...type,
         items: type.items.map((item) => item.supplier === supplier ? { ...item, supplier: "" } : item),
@@ -2094,7 +2169,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .eq("restaurant_id", selectedRestaurant.remoteId)
         .eq("name", supplier)
       if (error) syncError("supplier deletion", error)
+
+      const { error: itemError } = await supabase
+        .from("inventory_items")
+        .update({ supplier_name: null })
+        .eq("restaurant_id", selectedRestaurant.remoteId)
+        .eq("supplier_name", supplier)
+      if (itemError) syncError("supplier item detach", itemError)
     })()
+  }
+
+  const addProviderBill = (bill: Omit<ProviderBill, "id" | "uploadedAt"> & { id?: string; uploadedAt?: string }) => {
+    if (!can("create")) return
+    const supplier = bill.supplier.trim()
+    if (!supplier || bill.items.length === 0) return
+    const uploadedAt = bill.uploadedAt ?? new Date().toISOString()
+    const id = bill.id ?? `${supplier}-${bill.invoiceNumber || "bill"}-${uploadedAt}`
+
+    updateSelectedRestaurant((restaurant) => {
+      const existingBills = restaurant.providerBills ?? []
+      const nextBills = existingBills.some((existingBill) => existingBill.id === id)
+        ? existingBills.map((existingBill) => existingBill.id === id ? { ...existingBill, ...bill, supplier, id, uploadedAt } : existingBill)
+        : [...existingBills, { ...bill, supplier, id, uploadedAt }]
+
+      return {
+        ...restaurant,
+        suppliers: Array.from(new Set([...(restaurant.suppliers ?? []), supplier])),
+        providerBills: nextBills,
+      }
+    })
   }
 
   const addCustomUnit = (unit: Omit<CustomUnit, "id">) => {
@@ -2792,7 +2895,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       renameItemCategory,
       deleteItemCategory,
       addSupplier,
+      renameSupplier,
       deleteSupplier,
+      addProviderBill,
       addCustomUnit,
       deleteCustomUnit,
       createAudit,

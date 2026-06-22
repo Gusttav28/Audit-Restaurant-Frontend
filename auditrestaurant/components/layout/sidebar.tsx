@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BarChart3, Package, FileText, Settings, Menu, X, Coins, Languages, User, Users, PanelLeftClose, PanelLeftOpen, ChevronDown, LogOut, ClipboardCheck } from 'lucide-react'
+import { BarChart3, Package, FileText, Settings, Menu, X, Coins, Languages, User, Users, PanelLeftClose, PanelLeftOpen, ChevronDown, LogOut, ClipboardCheck, Truck } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useAppContext } from '@/components/app-context'
@@ -69,6 +69,7 @@ export default function Sidebar() {
   const menuItems = [
     { icon: BarChart3, label: t('dashboard'), href: '/dashboard', shortcut: undefined },
     { icon: Package, label: t('inventory'), href: '/inventory', shortcut: 'inventory' as const },
+    { icon: Truck, label: t('providers'), href: '/providers', shortcut: undefined },
     { icon: FileText, label: t('audits'), href: '/audits', shortcut: 'audits' as const },
     { icon: BarChart3, label: t('reports'), href: '/reports', shortcut: 'reports' as const },
     ...(isAdmin ? [

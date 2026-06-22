@@ -68,11 +68,32 @@ export interface RestaurantInventory {
   customUnits: CustomUnit[]
   itemCategories?: string[] | Record<number, string[]>
   suppliers?: string[]
+  providerBills?: ProviderBill[]
   inventoryLastEdited?: string
   currentUserRole?: "owner" | "admin" | "auditor" | "collaborator"
   currentUserPermissions?: AppPermissions
   teamMembers?: TeamMember[]
   audits: RestaurantAudit[]
+}
+
+export interface ProviderBillItem {
+  name: string
+  quantity: number
+  unit: string
+  unitPrice: number
+  priceCurrency: "USD" | "CRC"
+  category: string
+  inventoryTypeName: string
+}
+
+export interface ProviderBill {
+  id: string
+  supplier: string
+  invoiceNumber: string
+  uploadedAt: string
+  currency: "USD" | "CRC"
+  source: "bill-upload" | "manual"
+  items: ProviderBillItem[]
 }
 
 export interface AppPermissions {

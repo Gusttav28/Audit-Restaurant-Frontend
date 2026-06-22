@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "remotion:studio": "remotion studio src/remotion/index.ts",
     "remotion:render": "remotion render src/remotion/index.ts AuditFlowLoading out/auditflow-loading-reel.mp4",
+    "remotion:render:icon-film": "remotion render src/remotion/index.ts AuditNettIconTransitionFilm out/auditnett-icon-transition-film.mp4",
     "start": "next start"
   },
   "dependencies": {
@@ -55,6 +56,7 @@
     "motion": "^12.38.0",
     "next": "^16.2.7",
     "next-themes": "^0.4.6",
+    "pdfjs-dist": "^6.0.227",
     "radix-ui": "^1.4.3",
     "react": "19.2.0",
     "react-day-picker": "9.8.0",

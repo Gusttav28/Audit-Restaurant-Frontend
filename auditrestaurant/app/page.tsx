@@ -47,7 +47,7 @@ const capabilities = [
   "Multi-restaurant switching",
   "Supabase-backed auth",
   "Audit assignment tasks",
-  "CSV and PDF exports",
+  "XLSX and PDF exports",
   "Spanish and English UI",
   "Dark and light mode",
 ]
@@ -97,7 +97,7 @@ const platformTiles = [
     icon: BarChart3,
     title: "Analytics API",
     copy: "Turn completed audits into issue, value, discrepancy, and trend reports.",
-    bullets: ["Metrics", "Charts", "CSV / PDF"],
+    bullets: ["Metrics", "Charts", "XLSX / PDF"],
     accent: "accent",
     href: "/features/analytics-api",
   },
@@ -354,7 +354,7 @@ const workflowSteps = [
   {
     title: "Complete report",
     eyebrow: "Step 03",
-    description: "The completed audit exports to CSV/PDF and becomes the inventory's new stock snapshot.",
+    description: "The completed audit exports to XLSX/PDF and becomes the inventory's new stock snapshot.",
     metric: "100%",
   },
 ]

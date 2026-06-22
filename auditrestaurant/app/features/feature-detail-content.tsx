@@ -375,14 +375,14 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
     subtitle: "Create, assign, save, complete, export, and convert audit results into updated inventory stock.",
     overview: [
       "Audit Functions turn an inventory list into a guided count. Users enter current stock, save individual rows or groups of rows, track discrepancies, and complete the audit when every item has been reviewed.",
-      "Once completed, the audit becomes a stock snapshot and can update inventory quantities, show previous stock history, and export CSV or PDF reports.",
+      "Once completed, the audit becomes a stock snapshot and can update inventory quantities, show previous stock history, and export XLSX or PDF reports.",
     ],
     icon: Workflow,
     highlights: [
       { icon: ClipboardCheck, title: "Audit workflows", description: "Create audits for a selected restaurant and inventory, then navigate directly into the audit table." },
       { icon: Package, title: "Stock comparison", description: "Compare previous stock, current counted stock, sold values, and discrepancies row by row." },
       { icon: FileText, title: "Completion flow", description: "Complete only when every item is audited, then review a detailed summary modal." },
-      { icon: Download, title: "Export reports", description: "Export the exact completed audit state to CSV or PDF with restaurant, inventory, audit ID, and date in the file name." },
+      { icon: Download, title: "Export reports", description: "Export the exact completed audit state to XLSX or PDF with restaurant, inventory, audit ID, and date in the file name." },
     ],
     steps: [
       { title: "Create an audit", description: "Select inventory, responsible auditor, helper, and due date before the audit task is created." },
@@ -393,7 +393,7 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
     preview: {
       label: "GoFlow Restaurant · Audit functions",
       title: "Active inventory audit",
-      metrics: [["Progress", "12 / 12"], ["Discrepancy", "3"], ["Export", "CSV/PDF"]],
+      metrics: [["Progress", "12 / 12"], ["Discrepancy", "3"], ["Export", "XLSX/PDF"]],
       rows: [["Premium gin", "Previous 12 · Current 9", "Sold 3"], ["Tonic water", "Previous 8 · Current 7", "Sold 1"], ["Lime juice", "Previous 5 L · Current 4 L", "Merma"]],
     },
     cta: "Create audit workflow",
@@ -413,7 +413,7 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
         {
           title: "How it connects to workflow",
           description: "Completed audits lock the final count, update live inventory stock, and generate exportable records.",
-          points: ["CSV and PDF exports match the final audit state.", "Audit history becomes available from inventory.", "Assigned task notifications clear after completion."],
+          points: ["XLSX and PDF exports match the final audit state.", "Audit history becomes available from inventory.", "Assigned task notifications clear after completion."],
         },
       ],
     },
@@ -578,13 +578,13 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
       { icon: BarChart3, title: "Inventory performance", description: "See value, quantity, category, and issue metrics for the selected restaurant and inventory scope." },
       { icon: ClipboardCheck, title: "Audit results", description: "Review completed audits, discrepancies, sold values, and row-level audit outcomes." },
       { icon: TrendingUp, title: "Issues and trends", description: "Track repeated problems, issue severity, and operational changes over time." },
-      { icon: Download, title: "Export insights", description: "Export CSV or PDF summaries that match the report data currently shown in the UI." },
+      { icon: Download, title: "Export insights", description: "Export XLSX or PDF summaries that match the report data currently shown in the UI." },
     ],
     steps: [
       { title: "Open Reports", description: "Start from the selected restaurant so reports never mix data from another workspace." },
       { title: "Choose filters", description: "Filter by inventory, user, status, issue type, category, or date range." },
       { title: "Review details", description: "Open detailed report sections to understand what each metric means." },
-      { title: "Export the view", description: "Generate a shareable CSV or PDF from the exact report state on screen." },
+      { title: "Export the view", description: "Generate a shareable XLSX or PDF from the exact report state on screen." },
     ],
     preview: {
       label: "GoFlow Restaurant · Reports",
@@ -599,7 +599,7 @@ export const featurePages: Record<FeatureKey, FeatureContent> = {
         {
           title: "How users interact with it",
           description: "Users choose filters, review detailed sections, and export the current report view.",
-          points: ["Apply or reset report filters.", "Open detailed sections for selected metrics.", "Export CSV or PDF summaries."],
+          points: ["Apply or reset report filters.", "Open detailed sections for selected metrics.", "Export XLSX or PDF summaries."],
         },
         {
           title: "What information is shown",

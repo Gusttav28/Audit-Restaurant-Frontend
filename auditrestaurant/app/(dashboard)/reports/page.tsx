@@ -8,6 +8,7 @@ import { LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, X
 import { Button } from '@/components/ui/button'
 import { Download, FileText, Filter, HelpCircle, Loader2, X } from 'lucide-react'
 import { useAppContext } from '@/components/app-context'
+import { exportDocumentPdf, exportDocumentXlsx, slugifyFilePart, type ExportDocument } from '@/lib/document-export'
 
 type ReportSection = 'trend' | 'category' | 'compliance' | 'severity' | 'duration' | 'weekly'
 type ReportFilters = {
@@ -29,7 +30,7 @@ const defaultFilters: ReportFilters = {
 }
 
 export default function ReportsPage() {
-  const { selectedRestaurant, restaurants, formatCurrency, t } = useAppContext()
+  const { selectedRestaurant, restaurants, formatCurrency, t, language } = useAppContext()
   const [selectedPeriod, setSelectedPeriod] = useState(defaultFilters.period)
   const [selectedSections, setSelectedSections] = useState<ReportSection[]>([])
   const [draftFilters, setDraftFilters] = useState<ReportFilters>(defaultFilters)
@@ -38,7 +39,7 @@ export default function ReportsPage() {
   const [pinnedHelp, setPinnedHelp] = useState<null | { label: string; help: string }>(null)
   const [areFiltersOpen, setAreFiltersOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
+  const [isExporting, setIsExporting] = useState<null | 'xlsx' | 'pdf'>(null)
   const rawItems = selectedRestaurant.inventoryTypes.flatMap((type) => type.items)
   const rawAudits = selectedRestaurant.audits
   const auditorOptions = Array.from(new Set(rawAudits.map((audit) => audit.auditor).filter(Boolean))).sort()
@@ -245,6 +246,72 @@ export default function ReportsPage() {
 
   const pendingFilters = { ...draftFilters, period: selectedPeriod }
   const hasPendingFilterChanges = JSON.stringify(pendingFilters) !== JSON.stringify(appliedFilters)
+  const exportCopy = {
+    en: {
+      title: 'Operations report',
+      organizationSubtitle: 'Restaurant inventory operations',
+      report: 'Report',
+      issued: 'Issued',
+      sheetName: 'Report',
+      metric: 'Metric',
+      value: 'Value',
+      auditorFilter: 'Auditor filter',
+      inventoryFilter: 'Inventory filter',
+      statusFilter: 'Status filter',
+      issueFilter: 'Issue filter',
+      categoryFilter: 'Category filter',
+      sections: 'Sections',
+      all: 'All',
+      allValue: 'all',
+      inventoryValue: 'Inventory value',
+      totalAudits: 'Total audits',
+      completedAudits: 'Completed audits',
+      inventoryIssues: 'Inventory issues',
+      mermaItems: 'Merma items',
+      productionItems: 'Production items',
+      completedAuditMermaQuantity: 'Completed audit merma quantity',
+      completedAuditProductionQuantity: 'Completed audit production quantity',
+      exportNote: 'Export note',
+      exportNoteBody: 'This report reflects the filters and sections selected when the export was generated.',
+    },
+    es: {
+      title: 'Reporte de operaciones',
+      organizationSubtitle: 'Operaciones de inventario de restaurantes',
+      report: 'Reporte',
+      issued: 'Emitido',
+      sheetName: 'Reporte',
+      metric: 'Metrica',
+      value: 'Valor',
+      auditorFilter: 'Filtro de auditor',
+      inventoryFilter: 'Filtro de inventario',
+      statusFilter: 'Filtro de estado',
+      issueFilter: 'Filtro de problema',
+      categoryFilter: 'Filtro de categoria',
+      sections: 'Secciones',
+      all: 'Todas',
+      allValue: 'todos',
+      inventoryValue: 'Valor de inventario',
+      totalAudits: 'Total de auditorias',
+      completedAudits: 'Auditorias completadas',
+      inventoryIssues: 'Problemas de inventario',
+      mermaItems: 'Articulos de merma',
+      productionItems: 'Articulos de produccion',
+      completedAuditMermaQuantity: 'Cantidad de merma en auditorias completadas',
+      completedAuditProductionQuantity: 'Cantidad de produccion en auditorias completadas',
+      exportNote: 'Nota de exportacion',
+      exportNoteBody: 'Este reporte refleja los filtros y secciones seleccionadas al momento de generar el archivo.',
+    },
+  }[language]
+
+  const periodLabel = (period: string) => {
+    if (period === 'week') return t('lastWeek')
+    if (period === 'month') return t('lastMonth')
+    if (period === 'quarter') return t('lastQuarter')
+    if (period === 'year') return t('lastYear')
+    return t('allTime')
+  }
+
+  const filterValueLabel = (value: string) => value === 'all' ? exportCopy.allValue : value
 
   const handleOpenFilters = () => {
     setDraftFilters(appliedFilters)
@@ -288,35 +355,76 @@ export default function ReportsPage() {
     }
   }
 
-  const exportReport = () => {
-    setIsExporting(true)
+  const reportExportRows = [
+    { metric: t('restaurant'), value: selectedRestaurant.name },
+    { metric: t('period'), value: periodLabel(appliedFilters.period) },
+    { metric: exportCopy.inventoryValue, value: formatCurrency(inventoryValue) },
+    { metric: exportCopy.totalAudits, value: filteredAudits.length },
+    { metric: exportCopy.completedAudits, value: completedAudits.length },
+    { metric: t('complianceRate'), value: `${complianceRate.toFixed(1)}%` },
+    { metric: exportCopy.inventoryIssues, value: issuesCount },
+    { metric: exportCopy.mermaItems, value: mermaItems.length },
+    { metric: t('mermaQuantity'), value: mermaQuantity },
+    { metric: exportCopy.completedAuditMermaQuantity, value: completedAuditMermaQuantity },
+    { metric: exportCopy.productionItems, value: productionItems.length },
+    { metric: t('productionQuantity'), value: productionQuantity },
+    { metric: exportCopy.completedAuditProductionQuantity, value: completedAuditProductionQuantity },
+    { metric: t('avgIssuesPerAudit'), value: avgIssuesPerAudit.toFixed(1) },
+    { metric: t('avgAuditTime'), value: `${avgAuditTime} min` },
+  ]
+
+  const buildReportExportDocument = (): ExportDocument<typeof reportExportRows[number]> => ({
+    title: exportCopy.title,
+    subtitle: `${selectedRestaurant.name} - ${periodLabel(appliedFilters.period)}`,
+    organizationName: 'AuditNett',
+    organizationSubtitle: exportCopy.organizationSubtitle,
+    referenceLabel: exportCopy.report,
+    referenceValue: slugifyFilePart(selectedRestaurant.name) || 'restaurant',
+    issuedAt: new Date().toISOString().slice(0, 10),
+    issuedLabel: exportCopy.issued,
+    footerLabel: exportCopy.title,
+    sheetName: exportCopy.sheetName,
+    details: [
+      { label: t('restaurant'), value: selectedRestaurant.name },
+      { label: t('period'), value: periodLabel(appliedFilters.period) },
+      { label: exportCopy.auditorFilter, value: filterValueLabel(appliedFilters.auditor) },
+      { label: exportCopy.inventoryFilter, value: filterValueLabel(appliedFilters.inventoryId) },
+      { label: exportCopy.statusFilter, value: filterValueLabel(appliedFilters.auditStatus) },
+      { label: exportCopy.issueFilter, value: filterValueLabel(appliedFilters.issueType) },
+      { label: exportCopy.categoryFilter, value: filterValueLabel(appliedFilters.category) },
+      { label: exportCopy.sections, value: selectedSections.length ? selectedSections.map((sectionId) => reportSections.find((section) => section.id === sectionId)?.label ?? sectionId).join(', ') : exportCopy.all },
+    ],
+    metrics: [
+      { label: exportCopy.inventoryValue, value: formatCurrency(inventoryValue) },
+      { label: t('completed'), value: completedAudits.length },
+      { label: t('issuesFound'), value: issuesCount },
+      { label: t('complianceRate'), value: `${complianceRate.toFixed(1)}%` },
+    ],
+    columns: [
+      { key: 'metric', header: exportCopy.metric, width: 34 },
+      { key: 'value', header: exportCopy.value, width: 24, align: 'right' },
+    ],
+    rows: reportExportRows,
+    summary: [
+      { label: exportCopy.inventoryValue, value: formatCurrency(inventoryValue) },
+      { label: exportCopy.totalAudits, value: filteredAudits.length },
+      { label: exportCopy.completedAudits, value: completedAudits.length },
+      { label: t('complianceRate'), value: `${complianceRate.toFixed(1)}%`, emphasis: true },
+    ],
+    note: {
+      title: exportCopy.exportNote,
+      body: exportCopy.exportNoteBody,
+    },
+  })
+
+  const exportReport = (format: 'xlsx' | 'pdf') => {
+    setIsExporting(format)
     window.setTimeout(() => {
-      const rows = [
-        ['Restaurant', selectedRestaurant.name],
-        ['Period', appliedFilters.period],
-        ['Inventory Value', inventoryValue],
-        ['Total Audits', filteredAudits.length],
-        ['Completed Audits', completedAudits.length],
-        ['Compliance Rate', complianceRate.toFixed(1)],
-        ['Inventory Issues', issuesCount],
-        ['Merma Items', mermaItems.length],
-        ['Merma Quantity', mermaQuantity],
-        ['Completed Audit Merma Quantity', completedAuditMermaQuantity],
-        ['Production Items', productionItems.length],
-        ['Production Quantity', productionQuantity],
-        ['Completed Audit Production Quantity', completedAuditProductionQuantity],
-      ]
-      const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n')
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${selectedRestaurant.name.replace(/\s+/g, '-').toLowerCase()}-report.csv`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-      setIsExporting(false)
+      const document = buildReportExportDocument()
+      const filename = `${slugifyFilePart(selectedRestaurant.name)}-report.${format}`
+      if (format === 'xlsx') exportDocumentXlsx(document, filename)
+      if (format === 'pdf') exportDocumentPdf(document, filename)
+      setIsExporting(null)
     }, 400)
   }
 
@@ -803,9 +911,13 @@ export default function ReportsPage() {
                 <Button variant="outline" className="bg-transparent" onClick={() => setIsExportOpen(false)}>
                   {t('cancel')}
                 </Button>
-                <Button onClick={exportReport} disabled={isExporting} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-                  {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-                  {isExporting ? t('exporting') : t('export')}
+                <Button variant="outline" onClick={() => exportReport('xlsx')} disabled={Boolean(isExporting)} className="gap-2 bg-transparent">
+                  {isExporting === 'xlsx' ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  {isExporting === 'xlsx' ? t('exporting') : 'XLSX'}
+                </Button>
+                <Button onClick={() => exportReport('pdf')} disabled={Boolean(isExporting)} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                  {isExporting === 'pdf' ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                  {isExporting === 'pdf' ? t('exporting') : 'PDF'}
                 </Button>
               </div>
             </div>

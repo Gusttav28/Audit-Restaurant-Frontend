@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { AlertCircle, CircleDollarSign, Package, Plus, Settings, Store, TriangleAlert } from "lucide-react"
+import type React from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { AlertCircle, CircleDollarSign, FileUp, Loader2, Package, Plus, Settings, Store, TriangleAlert, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Header from "@/components/layout/header"
 import Sidebar from "@/components/layout/sidebar"
+import AuditFlowLogo from "@/components/layout/audit-flow-logo"
 import AddItemModal from "@/components/inventory/add-item-modal"
 import EditItemModal from "@/components/inventory/edit-item-modal"
 import InventoryFilters from "@/components/inventory/inventory-filters"
@@ -13,6 +15,18 @@ import InventoryTable from "@/components/inventory/inventory-table"
 import ManageTypesModal from "@/components/inventory/manage-types-modal"
 import { useAppContext } from "@/components/app-context"
 import { type InventoryItem } from "@/components/inventory/multi-restaurant-data"
+import { extractElectronicBillFromPdf, type ParsedBillItem } from "@/lib/electronic-bill-parser"
+
+type BillImportRow = ParsedBillItem & {
+  id: string
+  selected: boolean
+  typeId: number
+  category: string
+  minStock: number
+  supplier: string
+  currency: "CRC" | "USD"
+  invoiceNumber: string
+}
 
 export default function InventoryPage() {
   const {
@@ -29,7 +43,9 @@ export default function InventoryPage() {
     renameItemCategory,
     deleteItemCategory,
     addSupplier,
+    addProviderBill,
     deleteSupplier,
+    exchangeRate,
     language,
     formatCurrency,
     t,
@@ -45,6 +61,60 @@ export default function InventoryPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
   const [selectedAuditPreviewId, setSelectedAuditPreviewId] = useState("")
+  const [isBillImportOpen, setIsBillImportOpen] = useState(false)
+  const [isReadingBill, setIsReadingBill] = useState(false)
+  const [billImportError, setBillImportError] = useState("")
+  const [billSupplier, setBillSupplier] = useState("")
+  const [billCurrency, setBillCurrency] = useState<"CRC" | "USD">("CRC")
+  const [billInvoiceNumber, setBillInvoiceNumber] = useState("")
+  const [billRows, setBillRows] = useState<BillImportRow[]>([])
+  const billFileInputRef = useRef<HTMLInputElement | null>(null)
+  const billCopy = {
+    en: {
+      uploadBill: "Upload bill",
+      readingBill: "Reading bill...",
+      uploadingFiles: "Uploading files...",
+      billImportTitle: "Import electronic bill",
+      billImportDescription: "Review the detected bill lines before loading them into inventory.",
+      supplier: "Provider",
+      suppliers: "Providers",
+      invoice: "Invoice",
+      files: "Files",
+      noItems: "No inventory items were detected in this bill.",
+      importSelected: "Import selected",
+      item: "Item",
+      quantity: "Quantity",
+      unitPrice: "Unit price",
+      currency: "Currency",
+      minStock: "Min stock",
+      targetInventory: "Inventory",
+      select: "Select",
+      unsupported: "Upload a PDF electronic bill.",
+      readError: "I could not read inventory lines from this PDF. Try another electronic bill or add the item manually.",
+    },
+    es: {
+      uploadBill: "Subir factura",
+      readingBill: "Leyendo factura...",
+      uploadingFiles: "Cargando archivos...",
+      billImportTitle: "Importar factura electronica",
+      billImportDescription: "Revisa las lineas detectadas antes de cargarlas al inventario.",
+      supplier: "Proveedor",
+      suppliers: "Proveedores",
+      invoice: "Factura",
+      files: "Archivos",
+      noItems: "No se detectaron articulos de inventario en esta factura.",
+      importSelected: "Importar seleccionados",
+      item: "Articulo",
+      quantity: "Cantidad",
+      unitPrice: "Precio unitario",
+      currency: "Moneda",
+      minStock: "Stock minimo",
+      targetInventory: "Inventario",
+      select: "Seleccionar",
+      unsupported: "Sube una factura electronica en PDF.",
+      readError: "No pude leer lineas de inventario desde este PDF. Prueba otra factura electronica o agrega el articulo manualmente.",
+    },
+  }[language]
 
   const activeTypes = selectedRestaurant?.inventoryTypes.filter((type) => type.active) ?? []
   const selectedType = activeTypes.find((type) => type.id === selectedTypeId) ?? activeTypes[0]
@@ -183,6 +253,136 @@ export default function InventoryPage() {
     addSupplier(supplier)
   }
 
+  const handleBillFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ""
+    if (!files.length) return
+    if (files.some((file) => file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf"))) {
+      setBillImportError(billCopy.unsupported)
+      setIsBillImportOpen(true)
+      return
+    }
+
+    setIsReadingBill(true)
+    setBillImportError("")
+    try {
+      const bills = await Promise.all(files.map((file) => extractElectronicBillFromPdf(file)))
+      const defaultTypeId = selectedType?.id ?? activeTypes[0]?.id ?? 0
+      const rows = bills.flatMap((bill, billIndex) =>
+        bill.items.map((item, itemIndex) => ({
+          ...item,
+          id: `${bill.invoiceNumber ?? files[billIndex]?.name ?? "bill"}-${item.name}-${itemIndex}`,
+          selected: true,
+          typeId: defaultTypeId,
+          category: item.category,
+          minStock: 1,
+          supplier: bill.supplier,
+          currency: bill.currency,
+          invoiceNumber: bill.invoiceNumber ?? files[billIndex]?.name ?? "",
+        })),
+      )
+      const suppliers = Array.from(new Set(bills.map((bill) => bill.supplier).filter(Boolean)))
+      const currencies = Array.from(new Set(bills.map((bill) => bill.currency)))
+      setBillSupplier(suppliers.join(", "))
+      setBillCurrency(currencies[0] ?? "CRC")
+      setBillInvoiceNumber(files.length === 1 ? bills[0]?.invoiceNumber ?? files[0].name : `${files.length} ${billCopy.files}`)
+      setBillRows(rows)
+      setBillImportError(rows.length ? "" : billCopy.noItems)
+      setIsBillImportOpen(true)
+    } catch {
+      setBillRows([])
+      setBillSupplier("")
+      setBillInvoiceNumber(files.length === 1 ? files[0].name : `${files.length} ${billCopy.files}`)
+      setBillImportError(billCopy.readError)
+      setIsBillImportOpen(true)
+    } finally {
+      setIsReadingBill(false)
+    }
+  }
+
+  const updateBillRow = (rowId: string, data: Partial<BillImportRow>) => {
+    setBillRows((current) => current.map((row) => row.id === rowId ? { ...row, ...data } : row))
+  }
+
+  const normalizeProductName = (name: string) =>
+    name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\b(de|del|la|el|los|las)\b/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+
+  const handleImportBillRows = () => {
+    const selectedRows = billRows.filter((row) => row.selected)
+    selectedRows.forEach((row) => {
+      const targetType = activeTypes.find((type) => type.id === row.typeId) ?? selectedType ?? activeTypes[0]
+      if (!targetType) return
+      if (row.supplier) addSupplier(row.supplier)
+      if (row.category) addItemCategory(targetType.id, row.category)
+      const importedUnitPrice = row.currency === "CRC" ? row.unitPrice / exchangeRate : row.unitPrice
+      const matchingItem = targetType.items.find((item) => normalizeProductName(item.name) === normalizeProductName(row.name))
+
+      if (matchingItem) {
+        updateInventoryItem(matchingItem.id, {
+          quantity: matchingItem.quantity + row.quantity,
+          price: matchingItem.price + importedUnitPrice,
+          lastUpdated: new Date().toISOString().split("T")[0],
+        })
+      } else {
+        addInventoryItem(targetType.id, {
+          name: row.name,
+          type: targetType.name,
+          category: row.category || "General",
+          quantity: row.quantity,
+          unit: row.unit,
+          minStock: row.minStock,
+          status: "good",
+          price: importedUnitPrice,
+          priceCurrency: row.currency,
+          phase: "none",
+          lastUpdated: new Date().toISOString().split("T")[0],
+          supplier: row.supplier,
+          daysUntilExpiry: null,
+        })
+      }
+      setSelectedTypeId(targetType.id)
+    })
+
+    const billsByProvider = selectedRows.reduce<Record<string, typeof selectedRows>>((acc, row) => {
+      const key = `${row.supplier || "Unknown supplier"}||${row.invoiceNumber || "manual"}||${row.currency}`
+      acc[key] ??= []
+      acc[key].push(row)
+      return acc
+    }, {})
+
+    Object.entries(billsByProvider).forEach(([key, rows]) => {
+      const [supplier, invoiceNumber, currency] = key.split("||") as [string, string, "CRC" | "USD"]
+      addProviderBill({
+        supplier,
+        invoiceNumber,
+        currency,
+        source: "bill-upload",
+        items: rows.map((row) => {
+          const targetType = activeTypes.find((type) => type.id === row.typeId) ?? selectedType ?? activeTypes[0]
+          return {
+            name: row.name,
+            quantity: row.quantity,
+            unit: row.unit,
+            unitPrice: row.unitPrice,
+            priceCurrency: row.currency,
+            category: row.category || "General",
+            inventoryTypeName: targetType?.name ?? "",
+          }
+        }),
+      })
+    })
+    setIsBillImportOpen(false)
+    setBillRows([])
+    setBillImportError("")
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -204,6 +404,24 @@ export default function InventoryPage() {
               <Button onClick={() => setIsTypesModalOpen(true)} variant="outline" className="gap-2">
                 <Settings size={20} />
                 {t("manageTypes")}
+              </Button>
+              <input
+                ref={billFileInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                multiple
+                className="hidden"
+                onChange={handleBillFileChange}
+              />
+              <Button
+                type="button"
+                onClick={() => billFileInputRef.current?.click()}
+                disabled={!selectedType || Boolean(selectedAuditPreview) || !can("create") || isReadingBill}
+                variant="outline"
+                className="gap-2"
+              >
+                {isReadingBill ? <Loader2 size={20} className="animate-spin" /> : <FileUp size={20} />}
+                {isReadingBill ? billCopy.uploadingFiles : billCopy.uploadBill}
               </Button>
               <Button
                 onClick={() => setIsAddModalOpen(true)}
@@ -463,6 +681,178 @@ export default function InventoryPage() {
         onUpdateType={updateInventoryType}
         onDeleteType={handleDeleteType}
       />
+
+      {isReadingBill && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-background/35 p-4 backdrop-blur-sm">
+          <div className="text-center">
+            <AuditFlowLogo collapsed className="mx-auto mb-4 animate-pulse justify-center" imageClassName="h-16 w-16 rounded-2xl" />
+            <p className="text-sm uppercase tracking-widest text-muted-foreground">{billCopy.uploadingFiles}</p>
+            <h2 className="mt-2 text-2xl font-bold text-foreground">AuditNett</h2>
+          </div>
+        </div>
+      )}
+
+      {isBillImportOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-2 sm:p-4" onClick={() => setIsBillImportOpen(false)}>
+          <div className="flex w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] max-w-5xl flex-col overflow-hidden rounded-lg border border-border bg-card sm:w-[calc(100vw-2rem)] sm:max-h-[calc(100dvh-2rem)]" onClick={(event) => event.stopPropagation()}>
+            <div className="flex shrink-0 items-center justify-between border-b border-border p-4 sm:p-6">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">{billCopy.billImportTitle}</h2>
+                <p className="text-sm text-muted-foreground">{billCopy.billImportDescription}</p>
+              </div>
+              <button onClick={() => setIsBillImportOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X size={22} />
+              </button>
+            </div>
+            <div className="auditflow-thin-scrollbar flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{billCopy.suppliers}</p>
+                  <p className="mt-2 break-words text-sm font-semibold text-foreground">{billSupplier || "-"}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{billCopy.invoice}</p>
+                  <p className="mt-2 break-all text-sm font-semibold text-foreground">{billInvoiceNumber || "-"}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                  <p className="text-xs text-muted-foreground">{t("currency")}</p>
+                  <p className="mt-2 text-sm font-semibold text-foreground">{billCurrency}</p>
+                </div>
+              </div>
+
+              {billImportError && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+                  {billImportError}
+                </div>
+              )}
+
+              {billRows.length > 0 && (
+                <div className="auditflow-thin-scrollbar overflow-x-auto rounded-lg border border-border">
+                  <table className="min-w-[980px] w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/20">
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{billCopy.select}</th>
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{billCopy.item}</th>
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{billCopy.supplier}</th>
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{billCopy.targetInventory}</th>
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("category")}</th>
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{billCopy.quantity}</th>
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("unit")}</th>
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{billCopy.currency}</th>
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{billCopy.unitPrice}</th>
+                        <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{billCopy.minStock}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {billRows.map((row) => (
+                        <tr key={row.id} className="border-b border-border">
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={row.selected}
+                              onChange={(event) => updateBillRow(row.id, { selected: event.target.checked })}
+                              className="h-4 w-4 accent-primary"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              value={row.name}
+                              onChange={(event) => updateBillRow(row.id, { name: event.target.value })}
+                              className="w-56 rounded-md border border-border bg-background px-2 py-1 text-foreground focus:outline-none focus:border-primary"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              value={row.supplier}
+                              onChange={(event) => updateBillRow(row.id, { supplier: event.target.value })}
+                              className="w-44 rounded-md border border-border bg-background px-2 py-1 text-foreground focus:outline-none focus:border-primary"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={row.typeId}
+                              onChange={(event) => updateBillRow(row.id, { typeId: Number(event.target.value) })}
+                              className="w-36 rounded-md border border-border bg-background px-2 py-1 text-foreground focus:outline-none focus:border-primary"
+                            >
+                              {activeTypes.map((type) => (
+                                <option key={type.id} value={type.id}>{type.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              value={row.category}
+                              onChange={(event) => updateBillRow(row.id, { category: event.target.value })}
+                              className="w-32 rounded-md border border-border bg-background px-2 py-1 text-foreground focus:outline-none focus:border-primary"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={row.quantity}
+                              onChange={(event) => updateBillRow(row.id, { quantity: Number(event.target.value) })}
+                              className="w-24 rounded-md border border-border bg-background px-2 py-1 text-foreground focus:outline-none focus:border-primary"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              value={row.unit}
+                              onChange={(event) => updateBillRow(row.id, { unit: event.target.value })}
+                              className="w-20 rounded-md border border-border bg-background px-2 py-1 text-foreground focus:outline-none focus:border-primary"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={row.currency}
+                              onChange={(event) => updateBillRow(row.id, { currency: event.target.value as "CRC" | "USD" })}
+                              className="w-20 rounded-md border border-border bg-background px-2 py-1 text-foreground focus:outline-none focus:border-primary"
+                            >
+                              <option value="CRC">CRC</option>
+                              <option value="USD">USD</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={row.unitPrice}
+                              onChange={(event) => updateBillRow(row.id, { unitPrice: Number(event.target.value) })}
+                              className="w-28 rounded-md border border-border bg-background px-2 py-1 text-foreground focus:outline-none focus:border-primary"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={row.minStock}
+                              onChange={(event) => updateBillRow(row.id, { minStock: Number(event.target.value) })}
+                              className="w-24 rounded-md border border-border bg-background px-2 py-1 text-foreground focus:outline-none focus:border-primary"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-border p-4 sm:flex-row sm:justify-end sm:p-6">
+              <Button variant="outline" className="bg-transparent" onClick={() => setIsBillImportOpen(false)}>
+                {t("cancel")}
+              </Button>
+              <Button
+                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={handleImportBillRows}
+                disabled={!billRows.some((row) => row.selected)}
+              >
+                <FileUp size={16} />
+                {billCopy.importSelected}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
