@@ -225,7 +225,7 @@ export default function InventoryTable({ items, onUpdateItem, onDeleteItem, onEd
 
   return (
     <>
-    <div className="overflow-x-auto">
+    <div className="auditflow-thin-scrollbar max-w-full overflow-x-auto overscroll-x-contain rounded-lg border border-border">
       <table className="min-w-[1040px] w-full text-sm">
         <thead>
           <tr className="border-b border-border">

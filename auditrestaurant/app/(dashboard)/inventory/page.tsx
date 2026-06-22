@@ -384,23 +384,23 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen max-w-full overflow-x-hidden bg-background">
       <Sidebar />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 max-w-full flex-1 overflow-x-hidden">
         <Header />
-        <main className="p-4 space-y-6 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
+        <main className="max-w-full space-y-6 overflow-x-hidden p-4 sm:p-6">
+          <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Store size={16} className="text-primary" />
-                <span>{selectedRestaurant?.location}</span>
+                <span className="min-w-0 truncate">{selectedRestaurant?.location}</span>
               </div>
-              <h1 className="mt-1 text-3xl font-bold text-foreground">{t("inventoryManagement")}</h1>
-              <p className="text-muted-foreground mt-1">
+              <h1 className="mt-1 break-words text-3xl font-bold text-foreground">{t("inventoryManagement")}</h1>
+              <p className="mt-1 break-words text-muted-foreground">
                 {t("manageInventoryFor")} {selectedRestaurant?.name}
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="grid w-full min-w-0 gap-2 sm:w-auto sm:grid-flow-col sm:auto-cols-max">
               <Button onClick={() => setIsTypesModalOpen(true)} variant="outline" className="gap-2">
                 <Settings size={20} />
                 {t("manageTypes")}
@@ -538,19 +538,19 @@ export default function InventoryPage() {
 
           <Card className="bg-card border-border">
             <CardHeader>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <CardTitle className="flex items-center gap-2">
                     {selectedType ? (
                       <>
                         <span className="h-3 w-3 rounded-full" style={{ backgroundColor: selectedType.color }} />
-                        {focusedView === "low" ? t("lowStock") : focusedView === "expiring" ? t("expiringSoon") : focusedView === "all" ? t("restaurantItems") : `${selectedType.name} Inventory`}
+                        <span className="min-w-0 break-words">{focusedView === "low" ? t("lowStock") : focusedView === "expiring" ? t("expiringSoon") : focusedView === "all" ? t("restaurantItems") : `${selectedType.name} Inventory`}</span>
                       </>
                     ) : (
                       "Inventory"
                     )}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="break-words">
                     {selectedType
                       ? focusedView === "inventory" ? `Items assigned to ${selectedType.name} at ${selectedRestaurant?.name}` : `Items across all inventories at ${selectedRestaurant?.name}`
                       : "Create an inventory type to start adding items"}
@@ -586,7 +586,7 @@ export default function InventoryPage() {
                         value={selectedAuditPreviewId}
                         onChange={(event) => setSelectedAuditPreviewId(event.target.value)}
                         disabled={focusedView !== "inventory" || completedInventoryAudits.length === 0 || Boolean(selectedAuditPreview)}
-                        className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                        className="max-w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground transition-colors cursor-pointer focus:outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <option value="" className="bg-secondary">
                           {completedInventoryAudits.length ? t("auditHistory") : t("noAuditHistory")}

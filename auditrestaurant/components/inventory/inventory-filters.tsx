@@ -35,7 +35,7 @@ export default function InventoryFilters({
   const statuses = ["all", "good", "low", "critical"]
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-full space-y-4 overflow-x-hidden">
       {/* Search Bar */}
       <div className="relative">
         <Search className="absolute left-3 top-3 text-muted-foreground" size={18} />
@@ -49,8 +49,8 @@ export default function InventoryFilters({
       </div>
 
       {/* Filter Dropdowns */}
-      <div className="flex flex-wrap gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-wrap gap-3">
+        <div className="flex min-w-0 items-center gap-2">
           <Filter size={16} className="text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Filters:</span>
         </div>
@@ -59,7 +59,7 @@ export default function InventoryFilters({
           <select
             value={selectedType}
             onChange={(e) => onTypeChange(e.target.value)}
-            className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer"
+            className="max-w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground transition-colors cursor-pointer focus:outline-none focus:border-accent"
           >
             <option value="all" className="bg-secondary">
               All Types
@@ -76,7 +76,7 @@ export default function InventoryFilters({
         <select
           value={selectedCategory}
           onChange={(e) => onCategoryChange(e.target.value)}
-          className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer"
+          className="max-w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground transition-colors cursor-pointer focus:outline-none focus:border-accent"
         >
           {categoryOptions.map((cat) => (
             <option key={cat} value={cat} className="bg-secondary">
@@ -89,7 +89,7 @@ export default function InventoryFilters({
         <select
           value={selectedStatus}
           onChange={(e) => onStatusChange(e.target.value)}
-          className="px-3 py-2 bg-secondary/30 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer"
+          className="max-w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground transition-colors cursor-pointer focus:outline-none focus:border-accent"
         >
           <option value="all" className="bg-secondary">
             All Status
