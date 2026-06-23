@@ -235,6 +235,189 @@ const docsContent: Record<string, { title: string; category: string; content: Re
       </div>
     )
   },
+  "inventory/uploading-electronic-bills": {
+    title: "Uploading Electronic Bills",
+    category: "Inventory Management",
+    content: (
+      <div className="prose-content">
+        <p className="lead">
+          AuditNett can read electronic bill PDFs and load detected products into inventory, reducing manual entry for purchases and deliveries.
+        </p>
+
+        <h2>Upload a Bill from Inventory</h2>
+        <div className="step-list">
+          <div className="step">
+            <div className="step-number">1</div>
+            <div className="step-content">
+              <p>Open the <strong>Inventory</strong> page and choose the inventory area where the products should be reviewed.</p>
+            </div>
+          </div>
+          <div className="step">
+            <div className="step-number">2</div>
+            <div className="step-content">
+              <p>Click <strong>Upload bill</strong>. You can select one PDF or multiple electronic bill PDFs at once.</p>
+            </div>
+          </div>
+          <div className="step">
+            <div className="step-number">3</div>
+            <div className="step-content">
+              <p>Wait for the loading screen while AuditNett reads the files and extracts product, provider, quantity, unit, price, currency, and invoice details.</p>
+            </div>
+          </div>
+          <div className="step">
+            <div className="step-number">4</div>
+            <div className="step-content">
+              <p>Review the detected rows. You can edit product names, provider, target inventory, category, quantity, unit, currency, unit price, and minimum stock before importing.</p>
+            </div>
+          </div>
+          <div className="step">
+            <div className="step-number">5</div>
+            <div className="step-content">
+              <p>Click <strong>Import selected</strong> to add the selected rows to inventory and attach the bill to the matching provider record.</p>
+            </div>
+          </div>
+        </div>
+
+        <h2>How Matching Works</h2>
+        <p>
+          When a bill row has the same normalized product name as an existing inventory item, AuditNett updates the existing item instead of creating a duplicate.
+          The item quantity is added to the current quantity, and the imported price is added to the existing price.
+        </p>
+
+        <h2>New Providers</h2>
+        <p>
+          If the bill contains a provider that is not registered yet, AuditNett creates the provider automatically and shows the uploaded bill in that provider's page.
+        </p>
+
+        <div className="tip-box">
+          <Lightbulb size={18} />
+          <div>
+            <strong>Tip:</strong> Always review extracted bill rows before import, especially when provider PDFs use abbreviations or custom product descriptions.
+          </div>
+        </div>
+      </div>
+    )
+  },
+  "inventory/managing-providers": {
+    title: "Managing Providers",
+    category: "Inventory Management",
+    content: (
+      <div className="prose-content">
+        <p className="lead">
+          Providers help you track who supplies each item, which bills were uploaded, and the product history connected to each supplier.
+        </p>
+
+        <h2>Open the Providers Page</h2>
+        <p>
+          Use the <strong>Providers</strong> option in the sidebar to see every registered provider, the items they provide, uploaded bills, and total inventory value tied to that provider.
+        </p>
+
+        <h2>Add or Update a Provider</h2>
+        <div className="step-list">
+          <div className="step">
+            <div className="step-number">1</div>
+            <div className="step-content">
+              <p>Click <strong>Add Provider</strong> from the Providers page.</p>
+            </div>
+          </div>
+          <div className="step">
+            <div className="step-number">2</div>
+            <div className="step-content">
+              <p>Enter the provider name and save. AuditNett opens that provider's detail page so you can add items or upload bills immediately.</p>
+            </div>
+          </div>
+          <div className="step">
+            <div className="step-number">3</div>
+            <div className="step-content">
+              <p>Use the edit action in the provider list to rename a provider. The name updates across matching inventory items and provider bill history.</p>
+            </div>
+          </div>
+        </div>
+
+        <h2>Provider Detail Pages</h2>
+        <p>
+          Each provider page shows provider items, uploaded bills, and the current inventory value for that provider. From this page you can:
+        </p>
+        <ul>
+          <li>Edit provider item details directly from the item table.</li>
+          <li>Add a manual item supplied by that provider.</li>
+          <li>Upload one or more electronic bill PDFs for that provider.</li>
+          <li>Review bill history with invoice numbers, uploaded dates, item quantities, and prices.</li>
+        </ul>
+
+        <h2>Bill Uploads from Provider Pages</h2>
+        <p>
+          Uploading a bill from a provider detail page automatically connects the imported bill to that provider.
+          Matching item names are merged into existing inventory items; new item names are added as new inventory records.
+        </p>
+
+        <div className="warning-box">
+          <AlertCircle size={18} />
+          <div>
+            <strong>Note:</strong> Deleting a provider removes it from the provider registry and clears provider assignment from inventory items connected to that provider.
+          </div>
+        </div>
+      </div>
+    )
+  },
+  "reports/exporting-data": {
+    title: "Exporting Data",
+    category: "Reports & Analytics",
+    content: (
+      <div className="prose-content">
+        <p className="lead">
+          AuditNett exports audit and report information as polished PDF documents and XLSX spreadsheets using the current system language.
+        </p>
+
+        <h2>Available Export Formats</h2>
+        <ul>
+          <li><strong>PDF</strong> - Structured documents for sharing, filing, or printing.</li>
+          <li><strong>XLSX</strong> - Spreadsheet exports labeled as <strong>AuditNett export</strong> for analysis and record keeping.</li>
+        </ul>
+
+        <h2>Language Support</h2>
+        <p>
+          Exports follow the language currently selected in the platform. If AuditNett is set to Spanish, labels and headings are exported in Spanish.
+          If AuditNett is set to English, the exported document uses English labels.
+        </p>
+
+        <h2>Export Structure</h2>
+        <p>
+          PDF and XLSX exports are organized with a clear summary section followed by detailed rows. Audit exports include audit identifiers,
+          restaurant information, inventory context, status, dates, item counts, and item-level details when available.
+        </p>
+
+        <h2>How to Export</h2>
+        <div className="step-list">
+          <div className="step">
+            <div className="step-number">1</div>
+            <div className="step-content">
+              <p>Open an area that supports export, such as audit details or reports.</p>
+            </div>
+          </div>
+          <div className="step">
+            <div className="step-number">2</div>
+            <div className="step-content">
+              <p>Choose the PDF or XLSX export option.</p>
+            </div>
+          </div>
+          <div className="step">
+            <div className="step-number">3</div>
+            <div className="step-content">
+              <p>Save the generated file and share it with your team, accountant, or management group as needed.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="tip-box">
+          <Lightbulb size={18} />
+          <div>
+            <strong>Tip:</strong> Set your preferred language before exporting if the document will be shared with Spanish-speaking or English-speaking teams.
+          </div>
+        </div>
+      </div>
+    )
+  },
   "audits/starting-audits": {
     title: "Starting an Audit",
     category: "Audits",

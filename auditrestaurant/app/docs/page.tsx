@@ -12,6 +12,7 @@ import {
 const categories = [
   {
     title: "Getting Started",
+    path: "getting-started",
     icon: Book,
     description: "Learn the basics and set up your account",
     articles: [
@@ -23,11 +24,14 @@ const categories = [
   },
   {
     title: "Inventory Management",
+    path: "inventory",
     icon: Package,
     description: "Create and manage your inventories",
     articles: [
       { title: "Creating Inventories", slug: "creating-inventories" },
       { title: "Adding & Editing Items", slug: "managing-items" },
+      { title: "Uploading Electronic Bills", slug: "uploading-electronic-bills" },
+      { title: "Managing Providers", slug: "managing-providers" },
       { title: "Custom Units", slug: "custom-units" },
       { title: "Categories & Organization", slug: "categories" },
       { title: "Low Stock Alerts", slug: "stock-alerts" },
@@ -35,6 +39,7 @@ const categories = [
   },
   {
     title: "Audits",
+    path: "audits",
     icon: FileText,
     description: "Perform and manage inventory audits",
     articles: [
@@ -47,6 +52,7 @@ const categories = [
   },
   {
     title: "Reports & Analytics",
+    path: "reports",
     icon: BarChart3,
     description: "Understand your data and generate reports",
     articles: [
@@ -58,6 +64,7 @@ const categories = [
   },
   {
     title: "Team & Collaboration",
+    path: "team",
     icon: Users,
     description: "Work together with your team",
     articles: [
@@ -69,6 +76,7 @@ const categories = [
   },
   {
     title: "Billing & Subscriptions",
+    path: "billing-subscriptions",
     icon: CreditCard,
     description: "Manage your plan and payments",
     articles: [
@@ -84,6 +92,7 @@ const popularArticles = [
   { title: "Quick Start Guide", category: "Getting Started", slug: "getting-started/quick-start" },
   { title: "Starting an Audit", category: "Audits", slug: "audits/starting-audits" },
   { title: "Creating Inventories", category: "Inventory", slug: "inventory/creating-inventories" },
+  { title: "Uploading Electronic Bills", category: "Inventory", slug: "inventory/uploading-electronic-bills" },
   { title: "Roles & Permissions", category: "Team", slug: "team/roles-permissions" },
 ]
 
@@ -168,7 +177,7 @@ export default function DocsPage() {
                   {category.articles.map((article) => (
                     <li key={article.slug}>
                       <Link
-                        href={`/docs/${category.title.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}/${article.slug}`}
+                        href={`/docs/${category.path}/${article.slug}`}
                         className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 py-1"
                       >
                         {article.title}

@@ -1,0 +1,63 @@
+name: Security CI
+
+"on":
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "0 16 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  security-checks:
+    name: Audit and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auditrestaurant
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.4.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: auditrestaurant/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod
+
+      - name: Build with type checking
+        run: pnpm run build
+
+      - name: Check for committed env files
+        shell: bash
+        run: |
+          if find .. -path "../auditrestaurant/node_modules" -prune -o -path "../auditrestaurant/.next" -prune -o -type f -name ".env*" -print | grep -q .; then
+            echo "Environment files should not be committed."
+            exit 1
+          fi
+
+      - name: Check for obvious private key material
+        shell: bash
+        run: |
+          if grep -RIn --exclude-dir=node_modules --exclude-dir=.next --exclude=pnpm-lock.yaml "BEGIN .*PRIVATE KEY\\|SUPABASE_SERVICE_ROLE_KEY=.*[A-Za-z0-9_=-]\\{20,\\}\\|RESEND_API_KEY=.*[A-Za-z0-9_=-]\\{20,\\}" ..; then
+            echo "Potential secret material found."
+            exit 1
+          fi
